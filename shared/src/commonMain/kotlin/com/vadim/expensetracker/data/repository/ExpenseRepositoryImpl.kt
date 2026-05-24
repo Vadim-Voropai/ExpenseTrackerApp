@@ -5,7 +5,7 @@ import com.vadim.expensetracker.data.source.remote.GoogleDriveApi
 import com.vadim.expensetracker.domain.model.Expense
 import com.vadim.expensetracker.domain.repository.ExpenseRepository
 import com.vadim.expensetracker.domain.repository.GoogleAuthRepository
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Clock.System
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -113,7 +113,7 @@ class ExpenseRepositoryImpl(
                 val success = googleDriveApi.updateExpensesFile(token, fileId, uploadContent)
                 if (success) {
                     saveLocalExpenses(mergedList)
-                    localStorage.saveString("last_sync_time", kotlinx.datetime.Clock.System.now().toEpochMilliseconds().toString())
+                    localStorage.saveString("last_sync_time", System.now().toEpochMilliseconds().toString())
                     Result.success(Unit)
                 } else {
                     Result.failure(Exception("Failed to upload expenses to Google Drive"))

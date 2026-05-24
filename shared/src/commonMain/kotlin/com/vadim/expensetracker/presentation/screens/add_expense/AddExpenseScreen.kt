@@ -25,7 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Clock.System
 import com.vadim.expensetracker.domain.model.Category
 import com.vadim.expensetracker.presentation.screens.expenses.getCategoryColor
 import com.vadim.expensetracker.presentation.screens.expenses.getCategoryIcon
@@ -161,7 +161,7 @@ fun AddExpenseScreen(
                             )
                         }
                     }
-                    TextButton(onClick = { viewModel.onDateChanged(Clock.System.now().toEpochMilliseconds()) }) {
+                    TextButton(onClick = { viewModel.onDateChanged(System.now().toEpochMilliseconds()) }) {
                         Text("Set Today")
                     }
                 }

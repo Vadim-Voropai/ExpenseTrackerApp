@@ -1,7 +1,7 @@
 package com.vadim.expensetracker.presentation.screens.add_expense
 
 import androidx.lifecycle.ViewModel
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Clock.System
 import androidx.lifecycle.viewModelScope
 import com.vadim.expensetracker.domain.model.Category
 import com.vadim.expensetracker.domain.model.Expense
