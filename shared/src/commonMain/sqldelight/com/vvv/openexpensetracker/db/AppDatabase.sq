@@ -1,0 +1,24 @@
+CREATE TABLE ExpenseEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    date INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    lastModified INTEGER NOT NULL
+);
+
+getExpenses:
+SELECT * FROM ExpenseEntity ORDER BY date DESC;
+
+getExpenseById:
+SELECT * FROM ExpenseEntity WHERE id = ?;
+
+insertExpense:
+INSERT OR REPLACE INTO ExpenseEntity(id, description, amount, date, category, lastModified)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteExpense:
+DELETE FROM ExpenseEntity WHERE id = ?;
+
+deleteAllExpenses:
+DELETE FROM ExpenseEntity;

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinxSerialization)
+    alias(libs.plugins.sqldelight)
 }
 
 kotlin {
@@ -20,7 +21,7 @@ kotlin {
     }
 
     androidLibrary {
-        namespace = "com.vadim.expensetracker.shared"
+        namespace = "com.vvv.openexpensetracker.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -37,9 +38,12 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.play.services.auth)
+            implementation(libs.sqldelight.androidDriver)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
+            implementation(libs.sqldelight.nativeDriver)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -62,10 +66,27 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.kotlinx.datetime)
+            
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.sqldelight.coroutines)
+        }
+    }
+}
+
+sqldelight {
+    databases {
+        create("AppDatabase") {
+            packageName.set("com.vvv.openexpensetracker.db")
         }
     }
 }
 
 dependencies {
+    // Force consistent Skiko version across all modules to avoid incompatibility warnings
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains.skiko:skiko:0.144.6")
+        }
+    }
     androidRuntimeClasspath(libs.compose.uiTooling)
 }

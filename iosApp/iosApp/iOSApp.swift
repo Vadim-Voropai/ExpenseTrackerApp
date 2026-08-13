@@ -2,9 +2,9 @@ import SwiftUI
 import Shared
 
 class SwiftSignInHandler: NSObject, GoogleAuthRepositorySignInHandler {
-    let authRepository: GoogleAuthRepositoryImpl
+    let authRepository: GoogleAuthRepository
 
-    init(authRepository: GoogleAuthRepositoryImpl) {
+    init(authRepository: GoogleAuthRepository) {
         self.authRepository = authRepository
         super.init()
     }
@@ -29,6 +29,10 @@ class SwiftSignInHandler: NSObject, GoogleAuthRepositorySignInHandler {
     func onSignOutRequested() {
         print("Google Sign-Out requested on iOS")
     }
+
+    func onLaunchIntent(intentSender: Any) {
+        // Not used on iOS
+    }
 }
 
 @main
@@ -38,9 +42,9 @@ struct iOSApp: App {
     init() {
         KoinKt.doInitKoin(appDeclaration: nil)
 
-        let authRepo = KoinHelper().getGoogleAuthRepository() as! GoogleAuthRepositoryImpl
+        let authRepo = KoinHelper().getGoogleAuthRepository()
         self.signInHandler = SwiftSignInHandler(authRepository: authRepo)
-        authRepo.signInHandler = self.signInHandler
+        authRepo.setSignInHandler(handler: self.signInHandler)
     }
 
     var body: some Scene {

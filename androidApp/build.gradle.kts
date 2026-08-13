@@ -8,18 +8,18 @@ plugins {
 dependencies {
     implementation(projects.shared)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.compose.uiToolingPreview)
+    implementation("io.insert-koin:koin-android:4.2.1")
     implementation(libs.compose.foundation)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.play.services.auth)
 }
 
 android {
-    namespace = "com.vadim.expensetracker"
+    namespace = "com.vvv.openexpensetracker"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.vadim.expensetracker"
+        applicationId = "com.vvv.openexpensetracker"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
