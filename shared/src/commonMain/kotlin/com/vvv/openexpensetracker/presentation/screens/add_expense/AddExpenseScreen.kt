@@ -40,9 +40,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -64,6 +67,8 @@ fun AddExpenseScreen(
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
 
+    val focusRequester = remember { FocusRequester() }
+
     LaunchedEffect(expenseId) {
         viewModel.loadExpense(expenseId)
     }
@@ -72,6 +77,10 @@ fun AddExpenseScreen(
         if (uiState.isSaved) {
             navigateBack()
         }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 
     Scaffold(
@@ -113,7 +122,9 @@ fun AddExpenseScreen(
                     prefix = { Text(uiState.currency.symbol, style = typography.headlineMedium) },
                     textStyle = typography.headlineMedium,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
                     shape = RoundedCornerShape(dimens.cornerRadiusLarge),
                     isError = uiState.amountError != null,
                     supportingText = {

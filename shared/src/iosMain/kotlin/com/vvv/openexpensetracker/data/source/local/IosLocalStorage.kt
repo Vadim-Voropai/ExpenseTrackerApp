@@ -1,5 +1,6 @@
 package com.vvv.openexpensetracker.data.source.local
 
+import com.vvv.openexpensetracker.core.Constants
 import platform.Foundation.*
 
 class IosLocalStorage : LocalStorage {
@@ -17,7 +18,7 @@ class IosLocalStorage : LocalStorage {
         val fileManager = NSFileManager.defaultManager
         val urls = fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask)
         val documentUrl = urls.firstOrNull() as? NSURL ?: return
-        val fileUrl = documentUrl.URLByAppendingPathComponent("expenses.json") ?: return
+        val fileUrl = documentUrl.URLByAppendingPathComponent(Constants.EXPENSES_FILE_NAME) ?: return
 
         val nsString = content as NSString
         val data = nsString.dataUsingEncoding(NSUTF8StringEncoding) ?: return
@@ -28,7 +29,7 @@ class IosLocalStorage : LocalStorage {
         val fileManager = NSFileManager.defaultManager
         val urls = fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask)
         val documentUrl = urls.firstOrNull() as? NSURL ?: return null
-        val fileUrl = documentUrl.URLByAppendingPathComponent("expenses.json") ?: return null
+        val fileUrl = documentUrl.URLByAppendingPathComponent(Constants.EXPENSES_FILE_NAME) ?: return null
 
         if (!fileManager.fileExistsAtPath(fileUrl.path ?: "")) return null
 

@@ -12,6 +12,7 @@ interface GoogleAuthRepository {
     fun setSession(token: String?, email: String?, name: String?)
     fun isSignedIn(): Boolean
     suspend fun fetchProfileAndSetSession(token: String)
+    suspend fun refreshAccessToken(): String?
     fun setSignInHandler(handler: SignInHandler?)
     fun handleSignInResult(data: Any?)
 

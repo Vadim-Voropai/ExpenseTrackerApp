@@ -1,0 +1,5 @@
+- [x] Define `GoogleDriveRepository` interface
+- [x] Implement `GoogleDriveRepositoryImpl`
+- [x] Update `ExpenseRepositoryImpl` to depend on `GoogleDriveRepository`
+- [x] Update Koin modules to provide the new repository
+- [x] Verify build and functionality
