@@ -19,6 +19,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.logging.*
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -41,6 +42,14 @@ val dataModule = module {
             install(ContentNegotiation) {
                 json(get<Json>(), contentType = ContentType.Any)
             }
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        println("KTOR_HTTP_BASE: $message")
+                    }
+                }
+                level = LogLevel.ALL
+            }
         }
     }
 
@@ -49,6 +58,14 @@ val dataModule = module {
         HttpClient {
             install(ContentNegotiation) {
                 json(get<Json>(), contentType = ContentType.Any)
+            }
+            install(Logging) {
+                logger = object : Logger {
+                    override fun log(message: String) {
+                        println("KTOR_HTTP_AUTH: $message")
+                    }
+                }
+                level = LogLevel.ALL
             }
             install(Auth) {
                 bearer {
@@ -69,7 +86,7 @@ val dataModule = module {
     
     single { AppDatabase(get<DriverFactory>().createDriver()) }
     single { GoogleDriveApi(get()) }
-    single<GoogleDriveRepository> { GoogleDriveRepositoryImpl(get()) }
+    single<GoogleDriveRepository> { GoogleDriveRepositoryImpl(get(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl() }
 }

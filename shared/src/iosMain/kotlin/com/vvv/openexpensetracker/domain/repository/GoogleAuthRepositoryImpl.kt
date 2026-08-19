@@ -1,21 +1,17 @@
 package com.vvv.openexpensetracker.domain.repository
 
 import com.vvv.openexpensetracker.core.Constants
+import com.vvv.openexpensetracker.core.network.get
+import com.vvv.openexpensetracker.data.model.remote.GoogleUserInfo
 import com.vvv.openexpensetracker.data.source.local.SecureStorage
 import io.ktor.client.HttpClient
-import io.ktor.client.call.*
-import io.ktor.client.plugins.*
-import io.ktor.client.request.*
-import io.ktor.http.*
+import io.ktor.client.request.header
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 class GoogleAuthRepositoryImpl(
     private val httpClient: HttpClient,
@@ -35,68 +31,6 @@ class GoogleAuthRepositoryImpl(
     init {
         CoroutineScope(Dispatchers.Main).launch {
             loadSession()
-        }
-    }
-
-    private fun getBaseUrl(): String = ""
-
-    private suspend inline fun <reified T> get(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = httpClient.get("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend inline fun <reified T> post(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = httpClient.post("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend inline fun <reified T> put(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = httpClient.put("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend inline fun <reified T> patch(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = httpClient.patch("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend inline fun <reified T> delete(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = httpClient.delete("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            throw ClientRequestException(response, "")
         }
     }
 
@@ -123,7 +57,7 @@ class GoogleAuthRepositoryImpl(
         // Not used on iOS currently as we simulate sign in from Swift
     }
 
-    override fun signOut() {
+    override suspend fun signOut() {
         CoroutineScope(Dispatchers.Main).launch {
             setSession(null, null, null)
         }
@@ -148,13 +82,10 @@ class GoogleAuthRepositoryImpl(
 
     override suspend fun fetchProfileAndSetSession(token: String) {
         try {
-            val body: String = get(Constants.GOOGLE_USERINFO_URL) {
+            val userInfo: GoogleUserInfo = httpClient.get(Constants.GOOGLE_USERINFO_URL) {
                 header("Authorization", "Bearer $token")
             }
-            val jsonObject = Json.parseToJsonElement(body).jsonObject
-            val email = jsonObject["email"]?.jsonPrimitive?.content
-            val name = jsonObject["name"]?.jsonPrimitive?.content
-            setSession(token, email, name)
+            setSession(token, userInfo.email, userInfo.name)
         } catch (e: Exception) {
             e.printStackTrace()
             setSession(token, Constants.AUTH_FALLBACK_EMAIL, Constants.AUTH_FALLBACK_NAME)

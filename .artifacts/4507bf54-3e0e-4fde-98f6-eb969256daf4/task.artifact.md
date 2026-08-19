@@ -1,5 +1,11 @@
-- [x] Define `GoogleDriveRepository` interface
-- [x] Implement `GoogleDriveRepositoryImpl`
-- [x] Update `ExpenseRepositoryImpl` to depend on `GoogleDriveRepository`
-- [x] Update Koin modules to provide the new repository
+- [x] Update `Constants.kt` with cache keys
+- [x] Refactor `GoogleDriveApi.kt`
+    - [x] Make `getAppFolder` public
+    - [x] Update `findExpensesFile` to accept optional `folderId`
+    - [x] Update `createExpensesFile` to accept `folderId`
+- [x] Update `GoogleDriveRepository.kt` interface
+- [x] Update `GoogleDriveRepositoryImpl.kt`
+    - [x] Implement caching logic using `LocalStorage`
+    - [x] Implement error recovery for invalid IDs (404 handling)
+- [x] Update `Koin.kt` for injection
 - [x] Verify build and functionality

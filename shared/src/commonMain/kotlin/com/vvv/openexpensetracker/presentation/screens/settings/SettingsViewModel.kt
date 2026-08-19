@@ -66,7 +66,9 @@ class SettingsViewModel(
     }
 
     fun signOut() {
-        authRepository.signOut()
+        viewModelScope.launch {
+            authRepository.signOut()
+        }
     }
 
     fun syncNow() {

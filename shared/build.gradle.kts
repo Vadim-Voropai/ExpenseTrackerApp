@@ -43,6 +43,8 @@ kotlin {
             implementation(libs.sqldelight.androidDriver)
             implementation(libs.androidx.security.crypto)
             implementation(libs.androidx.datastore.preferences)
+            implementation(libs.androidx.cred.api)
+            implementation(libs.androidx.cred.play)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -63,6 +65,7 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.client.auth)
+            implementation(libs.ktor.client.logging)
             implementation(libs.ktor.serialization.kotlinx.json)
 
             implementation(libs.coil.compose)

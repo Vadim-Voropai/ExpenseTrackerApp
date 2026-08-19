@@ -8,7 +8,7 @@ interface GoogleAuthRepository {
     val userName: StateFlow<String?>
 
     fun initiateSignIn()
-    fun signOut()
+    suspend fun signOut()
     fun setSession(token: String?, email: String?, name: String?)
     fun isSignedIn(): Boolean
     suspend fun fetchProfileAndSetSession(token: String)

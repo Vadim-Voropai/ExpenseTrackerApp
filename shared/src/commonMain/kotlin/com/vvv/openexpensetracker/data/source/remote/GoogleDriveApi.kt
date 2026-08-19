@@ -1,134 +1,96 @@
 package com.vvv.openexpensetracker.data.source.remote
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.*
-import io.ktor.client.plugins.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
 import com.vvv.openexpensetracker.core.Constants
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import com.vvv.openexpensetracker.core.network.get
+import com.vvv.openexpensetracker.core.network.patch
+import com.vvv.openexpensetracker.core.network.post
+import com.vvv.openexpensetracker.data.model.remote.DriveFile
+import com.vvv.openexpensetracker.data.model.remote.DriveFileListResponse
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.request.HttpRequestBuilder
+import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 
 class UnauthorizedException : Exception("Unauthorized access - token may be expired")
 
 class GoogleDriveApi(private val client: HttpClient) {
-    private val json = Json { ignoreUnknownKeys = true }
 
-    private fun getBaseUrl(): String = ""
-
-    private suspend inline fun <reified T> post(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = client.post("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            if (response.status == HttpStatusCode.Unauthorized) throw UnauthorizedException()
-            throw ClientRequestException(response, "")
+    private fun HttpRequestBuilder.addDriveParams(includeItems: Boolean = false) {
+        parameter("supportsAllDrives", "true")
+        if (includeItems) {
+            parameter("includeItemsFromAllDrives", "true")
         }
     }
 
-    private suspend inline fun <reified T> get(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = client.get("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            if (response.status == HttpStatusCode.Unauthorized) throw UnauthorizedException()
-            throw ClientRequestException(response, "")
+    private fun Exception.handleUnauthorized() {
+        if (this is ClientRequestException && response.status == HttpStatusCode.Unauthorized) {
+            throw UnauthorizedException()
         }
     }
 
-    private suspend inline fun <reified T> patch(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = client.patch("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            if (response.status == HttpStatusCode.Unauthorized) throw UnauthorizedException()
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend inline fun <reified T> put(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = client.put("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            if (response.status == HttpStatusCode.Unauthorized) throw UnauthorizedException()
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend inline fun <reified T> delete(
-        urlString: String,
-        block: HttpRequestBuilder.() -> Unit = {}
-    ): T {
-        val response = client.delete("${getBaseUrl()}$urlString", block)
-        return if (response.status.isSuccess()) {
-            response.body()
-        } else {
-            if (response.status == HttpStatusCode.Unauthorized) throw UnauthorizedException()
-            throw ClientRequestException(response, "")
-        }
-    }
-
-    private suspend fun getOrCreateFolder(): String? {
+    suspend fun getAppFolder(createIfMissing: Boolean): String? {
         return try {
-            // 1. Search for the folder
-            val searchBody: String = get(Constants.GOOGLE_DRIVE_FILES_URL) {
-                parameter("q", "name='${Constants.EXPENSES_FILE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false")
-                parameter("fields", "files(id)")
+            // 1. Search for the folder globally (including shared and Shared Drives)
+            val response: DriveFileListResponse = client.get(Constants.GOOGLE_DRIVE_FILES_URL) {
+                addDriveParams(includeItems = true)
+                parameter("q", "name='${Constants.EXPENSES_FILE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed = false")
+                parameter("fields", "files(id,name)")
             }
 
-            val files = json.parseToJsonElement(searchBody).jsonObject["files"]?.jsonArray
-            if (files != null && files.isNotEmpty()) {
-                return files[0].jsonObject["id"]?.jsonPrimitive?.content
+            if (response.files.isNotEmpty()) {
+                return response.files[0].id
             }
 
-            // 2. Create the folder if not found
-            val createBody: String = post(Constants.GOOGLE_DRIVE_FILES_URL) {
+            if (!createIfMissing) return null
+
+            // 2. Create the folder if not found and requested
+            val createResponse: DriveFile = client.post(Constants.GOOGLE_DRIVE_FILES_URL) {
+                addDriveParams()
                 header(HttpHeaders.ContentType, "application/json")
                 setBody("""{"name": "${Constants.EXPENSES_FILE_FOLDER_NAME}", "mimeType": "application/vnd.google-apps.folder"}""")
             }
-            json.parseToJsonElement(createBody).jsonObject["id"]?.jsonPrimitive?.content
+            createResponse.id
         } catch (e: Exception) {
-            if (e is UnauthorizedException) throw e
+            e.handleUnauthorized()
             e.printStackTrace()
             null
         }
     }
 
     // Searches for the "expenses.json" file and returns its file ID if found
-    suspend fun findExpensesFile(): String? {
+    suspend fun findExpensesFile(folderId: String? = null): String? {
         return try {
-            val folderId = getOrCreateFolder() ?: return null
+            // 1. If folderId is provided, look specifically in that folder
+            if (folderId != null) {
+                val response: DriveFileListResponse = client.get(Constants.GOOGLE_DRIVE_FILES_URL) {
+                    addDriveParams(includeItems = true)
+                    parameter("q", "name='${Constants.EXPENSES_FILE_NAME}' and '$folderId' in parents and trashed = false")
+                    parameter("fields", "files(id,name)")
+                }
 
-            val body: String = get(Constants.GOOGLE_DRIVE_FILES_URL) {
-                parameter("q", "name='${Constants.EXPENSES_FILE_NAME}' and '$folderId' in parents and trashed=false")
-                parameter("fields", "files(id,name)")
-            }
-
-            val jsonObject = json.parseToJsonElement(body).jsonObject
-            val files = jsonObject["files"]?.jsonArray
-            if (files != null && files.isNotEmpty()) {
-                files[0].jsonObject["id"]?.jsonPrimitive?.content
+                if (response.files.isNotEmpty()) {
+                    return response.files[0].id
+                }
             } else {
-                null
+                // 2. Fallback: Search for any file named "expenses.json" that is shared with the user
+                val fallbackResponse: DriveFileListResponse = client.get(Constants.GOOGLE_DRIVE_FILES_URL) {
+                    addDriveParams(includeItems = true)
+                    parameter("q", "name='${Constants.EXPENSES_FILE_NAME}' and sharedWithMe = true and trashed = false")
+                    parameter("fields", "files(id,name)")
+                }
+                if (fallbackResponse.files.isNotEmpty()) {
+                    return fallbackResponse.files[0].id
+                }
             }
+
+            null
         } catch (e: Exception) {
-            if (e is UnauthorizedException) throw e
+            e.handleUnauthorized()
             e.printStackTrace()
             null
         }
@@ -137,29 +99,34 @@ class GoogleDriveApi(private val client: HttpClient) {
     // Downloads the content of a specific file
     suspend fun downloadExpensesFile(fileId: String): String? {
         return try {
-            get("${Constants.GOOGLE_DRIVE_FILES_URL}/$fileId") {
+            client.get("${Constants.GOOGLE_DRIVE_FILES_URL}/$fileId") {
+                addDriveParams(includeItems = true)
                 parameter("alt", "media")
             }
         } catch (e: Exception) {
-            if (e is UnauthorizedException) throw e
-            e.printStackTrace()
-            null
+            e.handleUnauthorized()
+            throw e
         }
     }
 
     // Creates an empty "expenses.json" metadata entry and returns its file ID
-    suspend fun createExpensesFile(): String? {
+    suspend fun createExpensesFile(folderId: String): String? {
         return try {
-            val folderId = getOrCreateFolder() ?: return null
-
-            val body: String = post(Constants.GOOGLE_DRIVE_FILES_URL) {
+            val createResponse: DriveFile = client.post(Constants.GOOGLE_DRIVE_FILES_URL) {
+                addDriveParams()
                 header(HttpHeaders.ContentType, "application/json")
                 setBody("""{"name": "${Constants.EXPENSES_FILE_NAME}", "parents": ["$folderId"]}""")
             }
-            val jsonObject = json.parseToJsonElement(body).jsonObject
-            jsonObject["id"]?.jsonPrimitive?.content
+            val fileId = createResponse.id
+
+            // Initialize with an empty JSON array to ensure a valid starting state
+            if (fileId != null) {
+                updateExpensesFile(fileId, "[]")
+            }
+
+            fileId
         } catch (e: Exception) {
-            if (e is UnauthorizedException) throw e
+            e.handleUnauthorized()
             e.printStackTrace()
             null
         }
@@ -168,16 +135,20 @@ class GoogleDriveApi(private val client: HttpClient) {
     // Updates the content of "expenses.json"
     suspend fun updateExpensesFile(fileId: String, content: String): Boolean {
         return try {
-            patch<HttpResponse>("${Constants.GOOGLE_DRIVE_UPLOAD_URL}/$fileId") {
+            client.patch<HttpResponse>("${Constants.GOOGLE_DRIVE_UPLOAD_URL}/$fileId") {
+                addDriveParams()
                 header(HttpHeaders.ContentType, "application/json")
                 parameter("uploadType", "media")
                 setBody(content)
             }
             true
         } catch (e: Exception) {
-            if (e is UnauthorizedException) throw e
-            e.printStackTrace()
-            false
+            try {
+                e.handleUnauthorized()
+            } catch (unauthorized: UnauthorizedException) {
+                throw unauthorized
+            }
+            throw e
         }
     }
 }

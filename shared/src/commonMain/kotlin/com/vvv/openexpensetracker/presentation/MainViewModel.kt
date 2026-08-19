@@ -46,8 +46,4 @@ class MainViewModel(
     fun handleSignInResult(data: Any?) {
         authRepository.handleSignInResult(data)
     }
-
-    fun signOut() {
-        authRepository.signOut()
-    }
 }

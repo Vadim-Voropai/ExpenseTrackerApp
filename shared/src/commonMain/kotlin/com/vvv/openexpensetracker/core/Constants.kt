@@ -12,6 +12,8 @@ object Constants {
     const val KEY_USER_EMAIL = "user_email"
     const val KEY_USER_NAME = "user_name"
     const val KEY_LAST_SYNC_TIME = "last_sync_time"
+    const val KEY_FOLDER_ID = "google_drive_folder_id"
+    const val KEY_FILE_ID = "google_drive_file_id"
 
     // Google API URLs
     const val GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -19,7 +21,7 @@ object Constants {
     const val GOOGLE_DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 
     // Google OAuth Scopes
-    const val SCOPE_DRIVE_FILE = "https://www.googleapis.com/auth/drive.file"
+    const val SCOPE_DRIVE_FILE = "https://www.googleapis.com/auth/drive"
     const val SCOPE_EMAIL = "email"
     const val SCOPE_PROFILE = "profile"
 

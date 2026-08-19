@@ -5,4 +5,5 @@ interface GoogleDriveRepository {
     suspend fun downloadExpensesFile(fileId: String): String?
     suspend fun createExpensesFile(): String?
     suspend fun updateExpensesFile(fileId: String, content: String): Boolean
+    fun clearCache()
 }

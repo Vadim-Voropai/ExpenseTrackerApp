@@ -1,38 +1,50 @@
-# Refactor GoogleDriveApi to GoogleDriveRepository
+# Cache Google Drive Folder and File IDs
 
-This plan aims to improve the project's architecture by introducing a `GoogleDriveRepository` to abstract the `GoogleDriveApi`. This follows the Clean Architecture pattern, ensuring that the domain layer (and other repositories) interact with interfaces rather than concrete API implementations.
+This plan implements local caching of Google Drive folder and file IDs to reduce API calls and improve synchronization performance.
 
 ## Proposed Changes
 
-### [Domain Layer]
+### [Core]
 
-#### [NEW] [GoogleDriveRepository.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/repository/GoogleDriveRepository.kt)
-Define an interface for Google Drive operations:
-- `suspend fun findExpensesFile(): String?`
-- `suspend fun downloadExpensesFile(fileId: String): String?`
-- `suspend fun createExpensesFile(): String?`
-- `suspend fun updateExpensesFile(fileId: String, content: String): Boolean`
+#### [MODIFY] [Constants.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/core/Constants.kt)
+- Add `KEY_FOLDER_ID = "google_drive_folder_id"`
+- Add `KEY_FILE_ID = "google_drive_file_id"`
+
+### [Remote Data Source]
+
+#### [MODIFY] [GoogleDriveApi.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/source/remote/GoogleDriveApi.kt)
+- Make `getAppFolder(createIfMissing: Boolean)` public so the repository can manage it.
+- Update `findExpensesFile(folderId: String? = null)` to use the provided `folderId` if available, bypassing folder discovery.
+- Update `createExpensesFile(folderId: String)` to require a `folderId`, ensuring the repository has already resolved it.
 
 ### [Data Layer]
 
-#### [NEW] [GoogleDriveRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/GoogleDriveRepositoryImpl.kt)
-Implement the `GoogleDriveRepository` interface using `GoogleDriveApi`.
+#### [MODIFY] [GoogleDriveRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/GoogleDriveRepositoryImpl.kt)
+- Inject `LocalStorage`.
+- **`findExpensesFile()`**:
+    1. Check `LocalStorage` for `KEY_FILE_ID`. If found, return it.
+    2. If not, check `LocalStorage` for `KEY_FOLDER_ID`.
+    3. Call `api.findExpensesFile(folderId)`.
+    4. If a file is found, save its ID to `LocalStorage`.
+    5. (Optional) If the folder was discovered during this call, we might need a way to capture it. I'll update `findExpensesFile` to return both or just ensure `getAppFolder` is called first if needed.
+- **`createExpensesFile()`**:
+    1. Get `folderId` (from cache or `api.getAppFolder(true)`).
+    2. Call `api.createExpensesFile(folderId)`.
+    3. Save both IDs to `LocalStorage`.
+- **Error Handling**: Catch `ClientRequestException` with `404 Not Found` in `downloadExpensesFile` and `updateExpensesFile`. If this happens, it means the cached ID is dead. Clear the cache and throw an exception to trigger a retry/re-discovery.
 
-#### [MODIFY] [ExpenseRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/ExpenseRepositoryImpl.kt)
-- Update constructor to accept `GoogleDriveRepository` instead of `GoogleDriveApi`.
-- Update all internal calls to use the repository.
+### [Domain Layer]
 
-### [Dependency Injection]
-
-#### [MODIFY] [Koin.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/di/Koin.kt)
-- Provide `GoogleDriveRepository` by binding it to `GoogleDriveRepositoryImpl`.
-- Keep `GoogleDriveApi` as a internal dependency (still a `single` but only used by the repository).
+#### [MODIFY] [GoogleDriveRepository.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/repository/GoogleDriveRepository.kt)
+- Add `fun clearCache()`.
 
 ## Verification Plan
 
 ### Automated Tests
-- I will verify that the project builds successfully.
+- Verify that the project builds.
+- I will check the logs to ensure that after the first sync, subsequent syncs do not call the "list files" or "search folder" endpoints if the IDs are cached.
 
 ### Manual Verification
-1. Perform a manual sync in the app.
-2. Verify that expenses are still correctly uploaded/downloaded from Google Drive.
+1. Perform a sync. Verify in logs that folder/file discovery happens.
+2. Perform another sync. Verify that it uses the cached IDs directly.
+3. Manually delete the file on Google Drive. Perform a sync. Verify that the app handles the 404, clears the cache, and re-creates/re-discovers the file.
