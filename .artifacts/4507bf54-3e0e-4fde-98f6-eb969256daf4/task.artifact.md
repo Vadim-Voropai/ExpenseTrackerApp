@@ -1,7 +1,8 @@
-- [ ] Setup Lottie (Compottie) dependencies
-- [ ] Create resources directory for Lottie
-- [ ] Update `SettingsViewModel` (only error messages)
-- [ ] Update `ExpenseListViewModel` (only error messages)
-- [ ] Refactor `SettingsScreen` (Snackbar + Lottie)
-- [ ] Refactor `ExpenseListScreen` (Snackbar + Lottie)
-- [ ] Verify build
+- [x] Centralize strings in `strings.xml`
+- [x] Refactor `HomeScreen.kt` to use resources
+- [x] Refactor `ExpenseListScreen.kt` to use resources
+- [x] Refactor `AddExpenseScreen.kt` to use resources
+- [x] Refactor `SettingsScreen.kt` to use resources
+- [x] Refactor `StatsScreen.kt` to use resources
+- [x] Handle Category name localization
+- [x] Verify build and UI

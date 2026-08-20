@@ -17,6 +17,12 @@ import com.vvv.openexpensetracker.presentation.screens.stats.StatsViewModel
 import com.vvv.openexpensetracker.presentation.screens.settings.SettingsScreen
 import com.vvv.openexpensetracker.presentation.screens.settings.SettingsViewModel
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
+import openexpensetracker.shared.generated.resources.Res
+import openexpensetracker.shared.generated.resources.tab_expenses
+import openexpensetracker.shared.generated.resources.tab_analytics
+import openexpensetracker.shared.generated.resources.tab_settings
+import openexpensetracker.shared.generated.resources.fab_add_expense
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun HomeScreen(
@@ -36,20 +42,20 @@ fun HomeScreen(
                 NavigationBarItem(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    icon = { Icon(Icons.Default.List, contentDescription = "Expenses") },
-                    label = { Text("Expenses", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) }
+                    icon = { Icon(Icons.Default.List, contentDescription = stringResource(Res.string.tab_expenses)) },
+                    label = { Text(stringResource(Res.string.tab_expenses), fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    icon = { Icon(Icons.Default.Info, contentDescription = "Analytics") },
-                    label = { Text("Analytics", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) }
+                    icon = { Icon(Icons.Default.Info, contentDescription = stringResource(Res.string.tab_analytics)) },
+                    label = { Text(stringResource(Res.string.tab_analytics), fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) }
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
-                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                    label = { Text("Settings", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) }
+                    icon = { Icon(Icons.Default.Settings, contentDescription = stringResource(Res.string.tab_settings)) },
+                    label = { Text(stringResource(Res.string.tab_settings), fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) }
                 )
             }
         },
@@ -60,7 +66,7 @@ fun HomeScreen(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Expense")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.fab_add_expense))
                 }
             }
         }

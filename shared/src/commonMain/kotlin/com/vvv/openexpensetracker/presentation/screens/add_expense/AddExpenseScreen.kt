@@ -55,6 +55,9 @@ import com.vvv.openexpensetracker.presentation.screens.expenses.formatDate
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
+import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
+import openexpensetracker.shared.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,10 +89,17 @@ fun AddExpenseScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (expenseId == null) "Add Expense" else "Edit Expense") },
+                title = { 
+                    Text(
+                        if (expenseId == null) 
+                            stringResource(Res.string.add_title) 
+                        else 
+                            stringResource(Res.string.edit_title)
+                    ) 
+                },
                 navigationIcon = {
                     IconButton(onClick = navigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(Res.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -110,7 +120,7 @@ fun AddExpenseScreen(
             ) {
                 // Large Amount Input
                 Text(
-                    text = "Amount",
+                    text = stringResource(Res.string.add_label_amount),
                     style = typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -118,7 +128,7 @@ fun AddExpenseScreen(
                 OutlinedTextField(
                     value = uiState.amount,
                     onValueChange = { viewModel.onAmountChanged(it) },
-                    placeholder = { Text("0.00", style = typography.headlineMedium) },
+                    placeholder = { Text(stringResource(Res.string.add_placeholder_amount), style = typography.headlineMedium) },
                     prefix = { Text(uiState.currency.symbol, style = typography.headlineMedium) },
                     textStyle = typography.headlineMedium,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -129,7 +139,7 @@ fun AddExpenseScreen(
                     isError = uiState.amountError != null,
                     supportingText = {
                         if (uiState.amountError != null) {
-                            Text(uiState.amountError ?: "", color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(Res.string.add_error_amount), color = MaterialTheme.colorScheme.error)
                         }
                     },
                     singleLine = true
@@ -139,7 +149,7 @@ fun AddExpenseScreen(
 
                 // Description Input
                 Text(
-                    text = "Description",
+                    text = stringResource(Res.string.add_label_description),
                     style = typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -147,7 +157,7 @@ fun AddExpenseScreen(
                 OutlinedTextField(
                     value = uiState.description,
                     onValueChange = { viewModel.onDescriptionChanged(it) },
-                    placeholder = { Text("What did you buy?") },
+                    placeholder = { Text(stringResource(Res.string.add_placeholder_description)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(dimens.cornerRadiusLarge),
                     isError = uiState.descriptionError != null,
@@ -174,13 +184,13 @@ fun AddExpenseScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.DateRange,
-                            contentDescription = "Date",
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(dimens.cornerRadiusNormal))
                         Column {
                             Text(
-                                "Date",
+                                stringResource(Res.string.add_label_date),
                                 style = typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -195,7 +205,7 @@ fun AddExpenseScreen(
                             kotlin.time.Clock.System.now().toEpochMilliseconds()
                         )
                     }) {
-                        Text("Set Today")
+                        Text(stringResource(Res.string.add_btn_set_today))
                     }
                 }
 
@@ -203,7 +213,7 @@ fun AddExpenseScreen(
 
                 // Category Selector
                 Text(
-                    text = "Select Category",
+                    text = stringResource(Res.string.add_label_category),
                     style = typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -218,6 +228,7 @@ fun AddExpenseScreen(
                     items(Category.list) { cat ->
                         val isSelected = uiState.category == cat
                         val color = getCategoryColor(cat)
+                        val nameRes = getCategoryNameResource(cat)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -248,14 +259,14 @@ fun AddExpenseScreen(
                                 ) {
                                     Icon(
                                         imageVector = getCategoryIcon(cat),
-                                        contentDescription = cat,
+                                        contentDescription = stringResource(nameRes),
                                         tint = if (isSelected) Color.White else color,
                                         modifier = Modifier.size(dimens.iconSizeNormal)
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                                 Text(
-                                    text = cat,
+                                    text = stringResource(nameRes),
                                     style = typography.labelMedium,
                                     textAlign = TextAlign.Center
                                 )
@@ -274,9 +285,9 @@ fun AddExpenseScreen(
                 shape = RoundedCornerShape(dimens.cornerRadiusLarge),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Default.Done, contentDescription = "Save")
+                Icon(Icons.Default.Done, contentDescription = null)
                 Spacer(modifier = Modifier.width(dimens.spacingSmall))
-                Text("Save Expense", style = typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(stringResource(Res.string.add_btn_save), style = typography.titleMedium.copy(fontWeight = FontWeight.Bold))
             }
         }
     }

@@ -2,12 +2,13 @@ package com.vvv.openexpensetracker.presentation.screens.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
+import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -16,14 +17,19 @@ import kotlinx.datetime.toLocalDateTime
 data class StatsUIState(
     val totalSpent: Double = 0.0,
     val categoryTotals: Map<String, Double> = emptyMap(),
-    val monthlyTotals: Map<String, Double> = emptyMap()
+    val monthlyTotals: Map<String, Double> = emptyMap(),
+    val currency: AppCurrency = AppCurrency.USD
 )
 
 class StatsViewModel(
-    private val repository: ExpenseRepository
+    private val repository: ExpenseRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
-    val uiState: StateFlow<StatsUIState> = repository.getExpenses().map { expenses ->
+    val uiState: StateFlow<StatsUIState> = combine(
+        repository.getExpenses(),
+        preferencesRepository.currency
+    ) { expenses, currency ->
         val total = expenses.sumOf { it.amount }
         val categories = expenses.groupBy { it.category }
             .mapValues { (_, items) -> items.sumOf { it.amount } }
@@ -33,7 +39,8 @@ class StatsViewModel(
         StatsUIState(
             totalSpent = total,
             categoryTotals = categories,
-            monthlyTotals = monthly
+            monthlyTotals = monthly,
+            currency = currency
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsUIState())
 

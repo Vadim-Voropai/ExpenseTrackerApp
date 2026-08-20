@@ -94,7 +94,7 @@ val dataModule = module {
 val viewModelModule = module {
     factory { ExpenseListViewModel(get(), preferencesRepository = get()) }
     factory { AddExpenseViewModel(get(), preferencesRepository = get()) }
-    factory { StatsViewModel(get()) }
+    factory { StatsViewModel(get(), preferencesRepository = get()) }
     factory { SettingsViewModel(get(), get(), get()) }
     factory { MainViewModel(get(), get()) }
 }

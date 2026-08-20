@@ -1,15 +1,69 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <resources>
-    <string name="label_title">Title</string>
-    <string name="label_artist">Artist</string>
-    <string name="label_date">Date</string>
-    <string name="label_dimensions">Dimensions</string>
-    <string name="label_medium">Medium</string>
-    <string name="label_department">Department</string>
-    <string name="label_repository">Repository</string>
-    <string name="label_credits">Credits</string>
-
+    <string name="app_name">Open Expense Tracker</string>
+    <string name="ok">OK</string>
     <string name="back">Back</string>
+    <string name="save">Save</string>
+    <string name="never">Never</string>
+    <string name="at">at</string>
 
-    <string name="no_data_available">No data available</string>
+    <!-- Home -->
+    <string name="tab_expenses">Expenses</string>
+    <string name="tab_analytics">Analytics</string>
+    <string name="tab_settings">Settings</string>
+    <string name="fab_add_expense">Add Expense</string>
+
+    <!-- Expense List -->
+    <string name="list_title">My Expenses</string>
+    <string name="list_sync_now">Sync Now</string>
+    <string name="list_search_placeholder">Search description...</string>
+    <string name="list_filter_all">All</string>
+    <string name="list_action_clear">Clear</string>
+    <string name="list_empty_no_expenses">No expenses yet</string>
+    <string name="list_empty_no_matching">No matching expenses</string>
+    <string name="list_empty_subtitle">Tap the "+" button to log a new purchase.</string>
+    <string name="list_action_delete">Delete</string>
+
+    <!-- Add/Edit Expense -->
+    <string name="add_title">Add Expense</string>
+    <string name="edit_title">Edit Expense</string>
+    <string name="add_label_amount">Amount</string>
+    <string name="add_placeholder_amount">0.00</string>
+    <string name="add_label_description">Description</string>
+    <string name="add_placeholder_description">What did you buy?</string>
+    <string name="add_label_date">Date</string>
+    <string name="add_btn_set_today">Set Today</string>
+    <string name="add_label_category">Select Category</string>
+    <string name="add_btn_save">Save Expense</string>
+    <string name="add_error_amount">Enter a valid amount greater than 0</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_user_account">User Account</string>
+    <string name="settings_signed_in_user">Signed In User</string>
+    <string name="settings_guest_mode_title">Guest Mode</string>
+    <string name="settings_guest_mode_subtitle">Sign in to backup your expenses to Google Drive.</string>
+    <string name="settings_label_currency">Preferred Currency</string>
+    <string name="settings_sync_section_title">Backup &amp; Sync</string>
+    <string name="settings_btn_sync">Sync with Google Drive</string>
+    <string name="settings_label_last_synced">Last synced:</string>
+    <string name="settings_btn_sign_out">Sign Out</string>
+    <string name="settings_btn_sign_in">Sign In with Google</string>
+    <string name="settings_version_info">Expense Tracker v1.0</string>
+    <string name="settings_syncing">Syncing</string>
+
+    <!-- Analytics -->
+    <string name="stats_title">Analytics</string>
+    <string name="stats_empty_message">Add some expenses to see analytics.</string>
+    <string name="stats_label_total_spent">Total Spent</string>
+    <string name="stats_breakdown_title">Category Breakdown</string>
+
+    <!-- Categories -->
+    <string name="category_food">Food</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_utilities">Utilities</string>
+    <string name="category_entertainment">Entertainment</string>
+    <string name="category_health">Health</string>
+    <string name="category_shopping">Shopping</string>
+    <string name="category_others">Others</string>
 </resources>

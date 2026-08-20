@@ -23,6 +23,9 @@ import com.vvv.openexpensetracker.presentation.screens.expenses.formatAmount
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
+import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
+import openexpensetracker.shared.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +37,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Analytics", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(Res.string.stats_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -54,7 +57,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Add some expenses to see analytics.",
+                        text = stringResource(Res.string.stats_empty_message),
                         style = typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -78,13 +81,13 @@ fun StatsScreen(viewModel: StatsViewModel) {
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Total Spent",
+                            text = stringResource(Res.string.stats_label_total_spent),
                             style = typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                         Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                         Text(
-                            text = "$${formatAmount(uiState.totalSpent)}",
+                            text = "${uiState.currency.symbol}${formatAmount(uiState.totalSpent)}",
                             style = typography.headlineMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -95,7 +98,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
 
                 // Breakdown list
                 Text(
-                    text = "Category Breakdown",
+                    text = stringResource(Res.string.stats_breakdown_title),
                     style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.onBackground
@@ -112,7 +115,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
                         CategoryBreakdownRow(
                             category = entry.key,
                             amount = entry.value,
-                            percentage = (entry.value / uiState.totalSpent) * 100
+                            percentage = (entry.value / uiState.totalSpent) * 100,
+                            currencySymbol = uiState.currency.symbol
                         )
                     }
                 }
@@ -158,11 +162,14 @@ fun DonutChart(
 fun CategoryBreakdownRow(
     category: String,
     amount: Double,
-    percentage: Double
+    percentage: Double,
+    currencySymbol: String
 ) {
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
     val color = getCategoryColor(category)
+    val nameRes = getCategoryNameResource(category)
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(dimens.cornerRadiusNormal),
@@ -189,14 +196,14 @@ fun CategoryBreakdownRow(
                 // Icon
                 Icon(
                     imageVector = getCategoryIcon(category),
-                    contentDescription = category,
+                    contentDescription = stringResource(nameRes),
                     tint = color,
                     modifier = Modifier.size(dimens.iconSizeSmall + dimens.spacingExtraSmall)
                 )
                 Spacer(modifier = Modifier.width(dimens.spacingSmall))
                 // Title
                 Text(
-                    text = category,
+                    text = stringResource(nameRes),
                     style = typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                 )
             }
@@ -204,7 +211,7 @@ fun CategoryBreakdownRow(
             // Amount and percent
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "$${formatAmount(amount)}",
+                    text = "${currencySymbol}${formatAmount(amount)}",
                     style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface
                 )

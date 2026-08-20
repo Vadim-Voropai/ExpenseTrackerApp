@@ -56,8 +56,9 @@ import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import openexpensetracker.shared.generated.resources.Res
+import openexpensetracker.shared.generated.resources.*
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
@@ -94,7 +95,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(Res.string.settings_title), fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -135,7 +136,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AccountBox,
-                                contentDescription = "User Account",
+                                contentDescription = stringResource(Res.string.settings_user_account),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(dimens.iconSizeExtraLarge - dimens.spacingSmall)
                             )
@@ -145,7 +146,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
                         if (uiState.isSignedIn) {
                             Text(
-                                text = uiState.userName ?: "Signed In User",
+                                text = uiState.userName ?: stringResource(Res.string.settings_signed_in_user),
                                 style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
@@ -157,13 +158,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                             )
                         } else {
                             Text(
-                                text = "Guest Mode",
+                                text = stringResource(Res.string.settings_guest_mode_title),
                                 style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                             Text(
-                                text = "Sign in to backup your expenses to Google Drive.",
+                                text = stringResource(Res.string.settings_guest_mode_subtitle),
                                 style = typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center
@@ -176,7 +177,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
                 // Currency Selector Section
                 Text(
-                    text = "Preferred Currency",
+                    text = stringResource(Res.string.settings_label_currency),
                     style = typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -211,7 +212,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
                 // Action controls
                 Text(
-                    text = "Backup & Sync",
+                    text = stringResource(Res.string.settings_sync_section_title),
                     style = typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = dimens.spacingExtraSmall, bottom = dimens.spacingSmall)
@@ -234,13 +235,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                                     composition = composition,
                                     progress = { lottieProgress }
                                 ),
-                                contentDescription = "Syncing",
+                                contentDescription = stringResource(Res.string.settings_syncing),
                                 modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
                             )
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync Now")
+                            Icon(Icons.Default.Refresh, contentDescription = null)
                             Spacer(modifier = Modifier.width(dimens.spacingSmall))
-                            Text("Sync with Google Drive", style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                            Text(stringResource(Res.string.settings_btn_sync), style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
                         }
                     }
 
@@ -254,7 +255,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Last synced:",
+                            text = stringResource(Res.string.settings_label_last_synced),
                             style = typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -281,7 +282,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                             )
                         )
                     ) {
-                        Text("Sign Out", style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                        Text(stringResource(Res.string.settings_btn_sign_out), style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 } else {
                     // Sign In Button
@@ -293,7 +294,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         shape = RoundedCornerShape(dimens.cornerRadiusLarge),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text("Sign In with Google", style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                        Text(stringResource(Res.string.settings_btn_sign_in), style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 }
             }
@@ -311,13 +312,13 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "Version",
+                        contentDescription = null,
                         modifier = Modifier.size(dimens.iconSizeSmall),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.width(dimens.spacingExtraSmall))
                     Text(
-                        text = "Expense Tracker v1.0",
+                        text = stringResource(Res.string.settings_version_info),
                         style = typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     )
@@ -327,16 +328,23 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     }
 }
 
+@Composable
 fun formatLastSyncTime(timestamp: Long): String {
-    if (timestamp == 0L) return "Never"
-    return try {
+    if (timestamp == 0L) return stringResource(Res.string.never)
+    
+    val datePart = formatDate(timestamp)
+    val timePart = try {
         val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(timestamp)
         val tz = TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(tz)
-        val time =
-            "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
-        "${formatDate(timestamp)} at $time"
+        "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
     } catch (e: Exception) {
-        "Never"
+        ""
+    }
+    
+    return if (timePart.isNotEmpty()) {
+        "$datePart ${stringResource(Res.string.at)} $timePart"
+    } else {
+        datePart
     }
 }

@@ -56,6 +56,7 @@ import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
+import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
@@ -63,8 +64,9 @@ import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import openexpensetracker.shared.generated.resources.Res
+import openexpensetracker.shared.generated.resources.*
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
@@ -123,7 +125,7 @@ fun ExpenseListScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "My Expenses",
+                        text = stringResource(Res.string.list_title),
                         style = typography.headlineLarge,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -134,11 +136,11 @@ fun ExpenseListScreen(
                                     composition = composition,
                                     progress = { lottieProgress }
                                 ),
-                                contentDescription = "Syncing",
+                                contentDescription = stringResource(Res.string.settings_syncing),
                                 modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
                             )
                         } else {
-                            Icon(Icons.Default.Refresh, contentDescription = "Sync Now")
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(Res.string.list_sync_now))
                         }
                     }
                 }
@@ -149,12 +151,12 @@ fun ExpenseListScreen(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = { viewModel.setSearchQuery(it) },
-                    placeholder = { Text("Search description...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                    placeholder = { Text(stringResource(Res.string.list_search_placeholder)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (uiState.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.list_action_clear))
                             }
                         }
                     },
@@ -178,7 +180,7 @@ fun ExpenseListScreen(
                         FilterChip(
                             selected = uiState.selectedCategory == null,
                             onClick = { viewModel.setCategoryFilter(null) },
-                            label = { Text("All") },
+                            label = { Text(stringResource(Res.string.list_filter_all)) },
                             shape = RoundedCornerShape(dimens.cornerRadiusExtraLarge)
                         )
                     }
@@ -187,12 +189,12 @@ fun ExpenseListScreen(
                         FilterChip(
                             selected = isSelected,
                             onClick = { viewModel.setCategoryFilter(if (isSelected) null else category) },
-                            label = { Text(category) },
+                            label = { Text(stringResource(getCategoryNameResource(category))) },
                             shape = RoundedCornerShape(dimens.cornerRadiusExtraLarge),
                             leadingIcon = {
                                 Icon(
                                     imageVector = getCategoryIcon(category),
-                                    contentDescription = category,
+                                    contentDescription = null,
                                     modifier = Modifier.size(dimens.iconSizeSmall),
                                     tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else getCategoryColor(
                                         category
@@ -218,19 +220,22 @@ fun ExpenseListScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "No Expenses",
+                        contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.size(dimens.iconSizeExtraLarge + dimens.spacingNormal)
                     )
                     Spacer(modifier = Modifier.height(dimens.spacingNormal))
                     Text(
-                        text = if (uiState.searchQuery.isNotEmpty() || uiState.selectedCategory != null) "No matching expenses" else "No expenses yet",
+                        text = if (uiState.searchQuery.isNotEmpty() || uiState.selectedCategory != null) 
+                            stringResource(Res.string.list_empty_no_matching) 
+                        else 
+                            stringResource(Res.string.list_empty_no_expenses),
                         style = typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(dimens.spacingSmall))
                     Text(
-                        text = "Tap the '+' button to log a new purchase.",
+                        text = stringResource(Res.string.list_empty_subtitle),
                         style = typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -291,7 +296,7 @@ fun ExpenseItemRow(
             ) {
                 Icon(
                     imageVector = getCategoryIcon(expense.category),
-                    contentDescription = expense.category,
+                    contentDescription = stringResource(getCategoryNameResource(expense.category)),
                     tint = catColor,
                     modifier = Modifier.size(dimens.iconSizeNormal)
                 )
@@ -331,7 +336,7 @@ fun ExpenseItemRow(
                 Row(horizontalArrangement = Arrangement.End) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(Res.string.list_action_delete),
                         tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
                         modifier = Modifier
                             .size(dimens.iconSizeNormal)

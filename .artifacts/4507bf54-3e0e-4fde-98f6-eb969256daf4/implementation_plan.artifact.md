@@ -1,53 +1,52 @@
-# Refactor Sync Feedback: Snackbar and Lottie Animation
+# Move Hardcoded Strings to Resources
 
-This plan replaces the intrusive sync alert dialogs with non-intrusive Snackbar messages for errors and adds a Lottie animation to indicate sync progress.
-
-## User Review Required
-
-> [!IMPORTANT]
-> - **Lottie Dependency**: I will add `io.github.alexzhirkevich:compottie:2.2.4` to support Lottie in Compose Multiplatform.
-> - **Animation File**: Since I cannot create a complex Lottie JSON file from scratch, I will set up the code to use a file named `sync_animation.json` in the `composeResources/files` directory. **You will need to provide this Lottie JSON file.**
-> - **Feedback Logic**:
->     - **Success**: No visual feedback other than the animation stopping.
->     - **Error**: A Snackbar will appear at the bottom of the screen with the error message.
+This plan aims to centralize all hardcoded UI strings into the `strings.xml` resource file to support future localization and improve maintainability using Compose Multiplatform Resources.
 
 ## Proposed Changes
 
-### [Infrastructure]
+### [Resources]
 
-#### [MODIFY] [libs.versions.toml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/gradle/libs.versions.toml)
-- Add `compottie = "2.2.4"`.
-- Add `compottie-library = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }`.
+#### [MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)
+- Clean up irrelevant strings (Artist, Dimensions, etc. if they are indeed not used).
+- Add strings for all screens:
+    - **General**: App Name, OK, Back, Save, Never, at.
+    - **Home**: Tab labels (Expenses, Analytics, Settings), FAB content description (Add Expense).
+    - **Expense List**: Title, Sync Now, Search placeholder, "All" filter, empty state messages, "Delete" action.
+    - **Add/Edit Expense**: Titles, "Amount" label and placeholder, "Description" label and placeholder, "Date" label and "Set Today" button, "Select Category" label, "Save Expense" button.
+    - **Settings**: Title, User Account content description, Guest Mode messages, Currency label, Backup & Sync section, "Sync with Google Drive", "Last synced" label, Sign Out, Sign In with Google, Version info.
+    - **Analytics**: Title, empty state message, "Total Spent", "Category Breakdown".
+    - **Categories**: Food, Transport, Utilities, Entertainment, Health, Shopping, Others.
 
-#### [MODIFY] [shared/build.gradle.kts](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/build.gradle.kts)
-- Add `libs.compottie.library` to `commonMain` dependencies.
+### [UI Screens]
 
-### [Presentation Layer - ViewModels]
-
-#### [MODIFY] [SettingsViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsViewModel.kt)
-- Update `syncNow()`: Only set `_syncMessage` on failure.
-
-#### [MODIFY] [ExpenseListViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListViewModel.kt)
-- Update `syncExpenses()`: Only set `_syncMessage` on failure.
-
-### [Presentation Layer - Screens]
-
-#### [MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)
-- Remove `AlertDialog` logic.
-- Add `SnackbarHost` and `SnackbarHostState` to the `Scaffold`.
-- Add `LaunchedEffect` to trigger `snackbarHostState.showSnackbar()` on errors.
-- Replace the `Refresh` icon/progress indicator with a `LottieAnimation` component when `uiState.isSyncing` is true.
+#### [MODIFY] [HomeScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/home/HomeScreen.kt)
+- Use `stringResource(Res.string.key)` for tab labels and FAB.
 
 #### [MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)
-- Remove `AlertDialog` logic.
-- Add `SnackbarHost` and `SnackbarHostState`.
-- Add `LaunchedEffect` for error Snackbars.
-- Replace the `Refresh` icon with a `LottieAnimation` component when `uiState.isRefreshing` is true.
+- Use `stringResource` for title, search, empty states, etc.
+- Update `formatDate` if necessary (though it seems to use platform-agnostic date formatting).
+
+#### [MODIFY] [AddExpenseScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/add_expense/AddExpenseScreen.kt)
+- Use `stringResource` for all labels, placeholders, and buttons.
+
+#### [MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)
+- Use `stringResource` for all settings labels, profile info, and sync details.
+
+#### [MODIFY] [StatsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/stats/StatsScreen.kt)
+- Use `stringResource` for titles and labels.
+
+### [Domain Model]
+
+#### [MODIFY] [Category.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/model/Category.kt)
+- Keep constants for keys, but consider how to display them in the UI.
+- I will add a helper function or mapping in the UI layer to translate these category keys using `stringResource`.
 
 ## Verification Plan
 
+### Automated Tests
+- Run `:androidApp:assembleDebug` to ensure all `stringResource` calls are valid and the `Res` class is re-generated correctly.
+
 ### Manual Verification
-1.  **Trigger Sync**: Tap the sync button.
-2.  **Verify Progress**: Ensure the Lottie animation plays (once the JSON file is provided).
-3.  **Verify Success**: Ensure NO dialog or snackbar appears on success.
-4.  **Verify Error**: Simulate an error and verify the Snackbar appears.
+1.  Navigate through all screens (Home, List, Add/Edit, Stats, Settings).
+2.  Verify that all text is still correctly displayed.
+3.  Check both Signed-in and Guest modes in Settings to verify conditional strings.

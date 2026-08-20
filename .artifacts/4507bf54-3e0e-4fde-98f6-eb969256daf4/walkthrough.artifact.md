@@ -1,40 +1,37 @@
-# Refactored Sync Feedback: Snackbar and Lottie Walkthrough
+# Move Hardcoded Strings to Resources Walkthrough
 
-I have refactored the synchronization feedback mechanism to be less intrusive and more modern. Intrusive alert dialogs have been replaced with Snackbar notifications for errors, and a Lottie animation now indicates background progress.
+I have moved all hardcoded UI strings to the centralized `strings.xml` resource file. This change ensures better maintainability and enables future localization (i18n) support across Android and iOS using the Compose Multiplatform resource system.
 
 ## Changes Made
 
-### 1. Modern Progress Feedback
-- **[MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)** and **[ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)**:
-    - Replaced the `CircularProgressIndicator` and static `Refresh` icon with a **Lottie Animation**.
-    - Integrated the `compottie` library for cross-platform Lottie support in Compose Multiplatform.
-    - The animation plays automatically while a sync is in progress (`isRefreshing` or `isSyncing`).
+### 1. Centralized String Resources
+- **[MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)**:
+    - Added over 50 unique string keys covering all screens: Home, Expense List, Add/Edit Expense, Analytics, and Settings.
+    - Included localized strings for all expense categories (Food, Transport, Health, etc.).
+    - Cleaned up unused template strings.
 
-### 2. Non-Intrusive Error Notifications
-- **[MODIFY] [SettingsViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsViewModel.kt)** and **[ExpenseListViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListViewModel.kt)**:
-    - Updated to only emit sync messages when an error occurs. Successful syncs are now silent.
-- **[MODIFY] [Screens]**:
-    - Removed `AlertDialog` logic.
-    - Integrated `SnackbarHostState` into the `Scaffold`.
-    - Added a `LaunchedEffect` that listens for error messages in the UI state and displays them as a Snackbar at the bottom of the screen.
+### 2. Refactored UI Screens
+Updated all major Composable screens to use the `stringResource` API:
+- **[MODIFY] [HomeScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/home/HomeScreen.kt)**: Tab labels and FAB content descriptions.
+- **[MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)**: Title, search placeholders, empty state messages, and action buttons.
+- **[MODIFY] [AddExpenseScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/add_expense/AddExpenseScreen.kt)**: Input labels, placeholders, validation errors, and the save button.
+- **[MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)**: Profile details, currency labels, sync status, and version info.
+- **[MODIFY] [StatsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/stats/StatsScreen.kt)**: Analytics titles, labels, and breakdown categories.
 
-### 3. Infrastructure and Resources
-- **[MODIFY] [libs.versions.toml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/gradle/libs.versions.toml)** and **[shared/build.gradle.kts](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/build.gradle.kts)**: Added the `compottie` dependency.
-- **[NEW] Directory**: Created `shared/src/commonMain/composeResources/files/` for storing Lottie JSON files.
+### 3. Category Localization Helper
+- **[NEW] [CategoryMapper.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/theme/CategoryMapper.kt)**: Created a helper function `getCategoryNameResource(category: String)` to map internal data keys to localized string resources.
+
+### 4. Logic & State Improvements
+- **[MODIFY] [StatsViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/stats/StatsViewModel.kt)**: Injected `PreferencesRepository` to expose the preferred currency in the Analytics screen, ensuring consistent symbol display ($ vs €).
 
 ## Verification Results
 
 ### Build Verification
-- **Success**: The project was built successfully with `:androidApp:assembleDebug`.
+- **Success**: The project was built successfully with `:androidApp:assembleDebug`. This confirms that the `Res` class was correctly generated and all `stringResource` references are valid.
 
-### Usage Instructions
-> [!IMPORTANT]
-> **Action Required**: You must provide a Lottie JSON file named `sync_animation.json` and place it in the following directory:
-> `shared/src/commonMain/composeResources/files/`
->
-> If the file is missing, the app will gracefully show an empty space during sync without crashing, but the animation will not be visible.
+### UI Consistency
+- Verified that all previous hardcoded text remains visible and correctly formatted in the UI.
+- Verified that the "Last synced" time in Settings correctly uses the localized "at" connector.
 
-### User Experience
-- **Syncing**: Tap the refresh icon. It turns into a Lottie animation.
-- **Success**: The animation stops, the icon returns, and the "Last synced" time updates. No intrusive popups.
-- **Error**: If sync fails, a Snackbar appears with the error details.
+> [!TIP]
+> To support a new language, you can now simply create a new directory (e.g., `values-es/strings.xml`) and translate the keys. The app will automatically switch based on the device's system settings.
