@@ -45,7 +45,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -369,13 +368,12 @@ fun ExpenseItemRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = expense.description,
+                    text = expense.displayTitle,
                     style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                 Text(
                     text = formatDate(expense.date),
                     style = typography.labelMedium,
@@ -384,9 +382,7 @@ fun ExpenseItemRow(
             }
 
             // Amount
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "${currency.symbol}${formatAmount(expense.amount)}",
                     style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),

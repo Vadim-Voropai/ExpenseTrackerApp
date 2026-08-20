@@ -1,6 +1,5 @@
-- [ ] Add `action_save` string to `strings.xml`
-- [ ] Refactor `AddExpenseScreen.kt`
-    - [ ] Move Save action to `TopAppBar`
-    - [ ] Remove bottom Save button
-    - [ ] Make screen scrollable and add navigation bars padding
-- [ ] Verify UI and functionality
+- [ ] Remove `ExpenseUiModel.kt`
+- [ ] Create `ExpenseExtensions.kt` with `displayTitle` extension
+- [ ] Refactor `ExpenseListViewModel` to use `List<Expense>`
+- [ ] Update `ExpenseListScreen` to use extension property
+- [ ] Verify build and UI behavior

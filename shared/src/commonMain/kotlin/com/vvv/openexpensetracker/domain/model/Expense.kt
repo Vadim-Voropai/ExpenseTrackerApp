@@ -11,4 +11,8 @@ data class Expense(
     val category: String,
     val lastModified: Long, // milliseconds timestamp for syncing conflict resolution
     val isDeleted: Boolean = false
-)
+) {
+    val displayTitle: String
+        get() = if (description.isEmpty()) category else "$category \n $description"
+
+}

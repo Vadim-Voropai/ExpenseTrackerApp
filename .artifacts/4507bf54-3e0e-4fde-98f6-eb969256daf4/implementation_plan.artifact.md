@@ -1,28 +1,36 @@
-# Align Save Action with Material 3 Guidelines
+# Simplify Expense Display Logic (Remove ExpenseUiModel)
 
-This plan improves the "Add/Edit Expense" user experience by moving the primary "Save" action to the `TopAppBar`, following standard Material 3 patterns for data-entry screens. This also fixes the issue of the button being positioned "too low" on the screen.
+This plan simplifies the UI logic by removing the `ExpenseUiModel` and instead using an extension property on the domain `Expense` model to calculate the display title. This reduces boilerplate while maintaining a clean separation of concerns.
 
 ## Proposed Changes
 
-### [Resources]
+### [Presentation Layer - Common]
 
-#### [MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)
-- Re-add a generic `action_save` string: "Save".
+#### [MODIFY] [UiText.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/util/UiText.kt)
+- No changes needed, keeping the existing `UiText` utility.
 
-### [Presentation Layer - UI]
+### [Presentation Layer - Expense List]
 
-#### [MODIFY] [AddExpenseScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/add_expense/AddExpenseScreen.kt)
-- **TopAppBar**: Add an `actions` block containing a `TextButton` that triggers `AddExpenseIntent.SaveExpense`. This makes the action always visible and easily accessible.
-- **Main Layout**:
-    - Remove the large `Button` from the bottom of the screen.
-    - Add `navigationBarsPadding()` to the root container to ensure the UI respects system bars.
-    - Wrap the content in a `verticalScroll` to ensure usability on smaller screens or when the keyboard is open.
-    - Adjust the `Column` arrangement from `SpaceBetween` to a standard top-aligned flow with spacing.
+#### [DELETE] [ExpenseUiModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseUiModel.kt)
+- Remove this file as it's no longer necessary.
+
+#### [NEW] [ExpenseExtensions.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseExtensions.kt)
+- Implement an extension property `val Expense.displayTitle: UiText`.
+- Move the logic: `if (description.isEmpty()) UiText.StringRes(...) else UiText.DynamicString(description)`.
+
+#### [MODIFY] [ExpenseListViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListViewModel.kt)
+- Revert `ExpenseListUIState` to hold `List<Expense>` instead of `ExpenseUiModel`.
+- Remove the mapping logic from the `combine` block.
+
+#### [MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)
+- Revert `ExpenseItemRow` and list items to use `Expense` directly.
+- Call the extension property `expense.displayTitle.asString()`.
 
 ## Verification Plan
 
+### Automated Tests
+- Run `:androidApp:assembleDebug` to ensure compilation is successful.
+
 ### Manual Verification
-1.  **UI Check**: Open the "Add Expense" screen. Verify that the "Save" button is now in the top right corner of the app bar.
-2.  **Functionality**: Input data and tap the "Save" button in the app bar. Ensure the expense is saved and you are navigated back to the list.
-3.  **Keyboard Handling**: Open the keyboard and verify that you can still scroll through the category grid if needed.
-4.  **Edge-to-Edge**: Verify that the bottom of the screen (the category grid) has proper padding and is not clipped by the system navigation bar.
+- Verify that the expense list still correctly displays the description or the category name fallback.
+- Ensure that clicking/swiping items still works as expected with the simplified model.
