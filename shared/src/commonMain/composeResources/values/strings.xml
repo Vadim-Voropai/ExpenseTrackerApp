@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Open Expense Tracker</string>
     <string name="back">Back</string>
+    <string name="action_save">Save</string>
     <string name="never">Never</string>
     <string name="at">at</string>
 

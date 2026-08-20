@@ -1,8 +1,6 @@
 package com.vvv.openexpensetracker.data.source.local
 
-import platform.Foundation.*
-import platform.Security.*
-import kotlinx.cinterop.*
+import platform.Foundation.NSUserDefaults
 
 class IosSecureStorage : SecureStorage {
     private val defaults = NSUserDefaults.standardUserDefaults

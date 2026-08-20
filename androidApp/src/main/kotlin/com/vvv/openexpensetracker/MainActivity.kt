@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.vvv.openexpensetracker.domain.repository.GoogleAuthRepository
+import com.vvv.openexpensetracker.presentation.MainIntent
 import com.vvv.openexpensetracker.presentation.MainViewModel
 import org.koin.android.ext.android.inject
 
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == RC_AUTHORIZE) {
-            viewModel.handleSignInResult(data)
+            viewModel.onIntent(MainIntent.HandleSignInResult(data))
         }
     }
 

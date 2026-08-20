@@ -3,94 +3,109 @@ package com.vvv.openexpensetracker.presentation.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.model.AppCurrency
-import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
-import com.vvv.openexpensetracker.domain.repository.GoogleAuthRepository
-import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
+import com.vvv.openexpensetracker.domain.usecase.GetAuthStateUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetLastSyncTimeUseCase
+import com.vvv.openexpensetracker.domain.usecase.SetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.SignInUseCase
+import com.vvv.openexpensetracker.domain.usecase.SignOutUseCase
+import com.vvv.openexpensetracker.domain.usecase.SyncExpensesUseCase
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+sealed interface SettingsUiEffect {
+    data class ShowSnackbar(val message: String) : SettingsUiEffect
+}
 
 data class SettingsUIState(
     val isSignedIn: Boolean = false,
     val isSyncing: Boolean = false,
     val userEmail: String? = null,
     val userName: String? = null,
-    val syncMessage: String? = null,
     val currency: AppCurrency = AppCurrency.USD,
     val lastSyncTime: Long = 0L
 )
 
 class SettingsViewModel(
-    private val authRepository: GoogleAuthRepository,
-    private val expenseRepository: ExpenseRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val signInUseCase: SignInUseCase,
+    private val signOutUseCase: SignOutUseCase,
+    private val syncExpensesUseCase: SyncExpensesUseCase,
+    private val setCurrencyUseCase: SetCurrencyUseCase,
+    private val getAuthStateUseCase: GetAuthStateUseCase,
+    private val getCurrencyUseCase: GetCurrencyUseCase,
+    private val getLastSyncTimeUseCase: GetLastSyncTimeUseCase
 ) : ViewModel() {
 
     private val _isSyncing = MutableStateFlow(false)
-    private val _syncMessage = MutableStateFlow<String?>(null)
+    private val _effect = Channel<SettingsUiEffect>(Channel.BUFFERED)
+    val effect = _effect.receiveAsFlow()
 
     val uiState: StateFlow<SettingsUIState> = combine(
         combine(
-            authRepository.accessToken,
-            authRepository.userEmail,
-            authRepository.userName
+            getAuthStateUseCase.accessToken,
+            getAuthStateUseCase.userEmail,
+            getAuthStateUseCase.userName
         ) { token, email, name -> Triple(token, email, name) },
         combine(
             _isSyncing,
-            _syncMessage,
-            preferencesRepository.currency
-        ) { syncing, message, currency -> Triple(syncing, message, currency) }
+            getCurrencyUseCase.currency
+        ) { syncing, currency -> Pair(syncing, currency) }
     ) { authInfo, prefInfo ->
         val (token, email, name) = authInfo
-        val (syncing, message, currency) = prefInfo
+        val (syncing, currency) = prefInfo
         SettingsUIState(
             isSignedIn = token != null,
             isSyncing = syncing,
             userEmail = email,
             userName = name,
-            syncMessage = message,
             currency = currency,
-            lastSyncTime = expenseRepository.getLastSyncTime()
+            lastSyncTime = getLastSyncTimeUseCase()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUIState())
 
-    fun clearMessage() {
-        _syncMessage.value = null
-    }
-
-    fun signIn() {
-        authRepository.initiateSignIn()
-    }
-
-    fun signOut() {
-        viewModelScope.launch {
-            authRepository.signOut()
+    fun onIntent(intent: SettingsIntent) {
+        when (intent) {
+            SettingsIntent.SignIn -> signIn()
+            SettingsIntent.SignOut -> signOut()
+            SettingsIntent.SyncNow -> syncNow()
+            is SettingsIntent.SetCurrency -> setCurrency(intent.currency)
         }
     }
 
-    fun syncNow() {
-        if (!authRepository.isSignedIn()) {
-            _syncMessage.value = "Sign in first to sync with Google Drive"
+    private fun signIn() {
+        signInUseCase()
+    }
+
+    private fun signOut() {
+        viewModelScope.launch {
+            signOutUseCase()
+        }
+    }
+
+    private fun syncNow() {
+        if (!getAuthStateUseCase.isSignedIn()) {
+            viewModelScope.launch {
+                _effect.send(SettingsUiEffect.ShowSnackbar("Sign in first to sync with Google Drive"))
+            }
             return
         }
         viewModelScope.launch {
             _isSyncing.value = true
-            _syncMessage.value = "Syncing..."
-            expenseRepository.syncWithGoogleDrive()
-                .onSuccess {
-                    _syncMessage.value = "Sync completed successfully!"
-                }
+            syncExpensesUseCase()
                 .onFailure { error ->
-                    _syncMessage.value = "Sync failed: ${error.message}"
+                    _effect.send(SettingsUiEffect.ShowSnackbar("Sync failed: ${error.message}"))
                 }
             _isSyncing.value = false
         }
     }
 
-    fun setCurrency(newCurrency: AppCurrency) {
-        preferencesRepository.setCurrency(newCurrency)
+    private fun setCurrency(newCurrency: AppCurrency) {
+        setCurrencyUseCase(newCurrency)
     }
 }

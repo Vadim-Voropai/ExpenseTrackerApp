@@ -4,44 +4,57 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.domain.model.Expense
-import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
-import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
+import com.vvv.openexpensetracker.domain.usecase.DeleteExpenseUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
+import com.vvv.openexpensetracker.domain.usecase.SyncExpensesUseCase
+import com.vvv.openexpensetracker.domain.usecase.UndoDeleteExpenseUseCase
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+sealed interface ExpenseListUiEffect {
+    data class ShowUndoSnackbar(val expenseId: String) : ExpenseListUiEffect
+    data class ShowError(val message: String) : ExpenseListUiEffect
+}
 
 data class ExpenseListUIState(
     val searchQuery: String = "",
     val selectedCategory: String? = null,
     val currency: AppCurrency = AppCurrency.USD,
     val isRefreshing: Boolean = false,
-    val syncMessage: String? = null,
     val expenses: List<Expense> = emptyList()
 )
 
 class ExpenseListViewModel(
-    private val repository: ExpenseRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val getExpensesUseCase: GetExpensesUseCase,
+    private val deleteExpenseUseCase: DeleteExpenseUseCase,
+    private val undoDeleteExpenseUseCase: UndoDeleteExpenseUseCase,
+    private val syncExpensesUseCase: SyncExpensesUseCase,
+    getCurrencyUseCase: GetCurrencyUseCase
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedCategory = MutableStateFlow<String?>(null)
     private val _isRefreshing = MutableStateFlow(false)
-    private val _syncMessage = MutableStateFlow<String?>(null)
+
+    private val _effect = Channel<ExpenseListUiEffect>(Channel.BUFFERED)
+    val effect = _effect.receiveAsFlow()
 
     val uiState: StateFlow<ExpenseListUIState> = combine(
-        repository.getExpenses(),
+        getExpensesUseCase(),
         combine(
             _searchQuery,
             _selectedCategory,
-            preferencesRepository.currency,
-            _isRefreshing,
-            _syncMessage
-        ) { query, category, currency, refreshing, message ->
-            FiveArgs(query, category, currency, refreshing, message)
+            getCurrencyUseCase.currency,
+            _isRefreshing
+        ) { query, category, currency, refreshing ->
+            FourArgs(query, category, currency, refreshing)
         }
     ) { expensesList, args ->
         val filteredExpenses = expensesList.filter { expense ->
@@ -56,58 +69,48 @@ class ExpenseListViewModel(
             selectedCategory = args.category,
             currency = args.currency,
             isRefreshing = args.refreshing,
-            syncMessage = args.message,
             expenses = filteredExpenses
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExpenseListUIState())
 
-    private data class FiveArgs(
+    private data class FourArgs(
         val query: String,
         val category: String?,
         val currency: AppCurrency,
-        val refreshing: Boolean,
-        val message: String?
+        val refreshing: Boolean
     )
 
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun setCategoryFilter(category: String?) {
-        _selectedCategory.value = category
-    }
-
-    fun deleteExpense(id: String) {
-        viewModelScope.launch {
-            repository.deleteExpense(id)
+    fun onIntent(intent: ExpenseListIntent) {
+        when (intent) {
+            is ExpenseListIntent.SearchQueryChanged -> _searchQuery.value = intent.query
+            is ExpenseListIntent.CategoryFilterChanged -> _selectedCategory.value = intent.category
+            is ExpenseListIntent.DeleteExpense -> deleteExpense(intent.id)
+            is ExpenseListIntent.UndoDelete -> undoDelete(intent.id)
+            ExpenseListIntent.SyncExpenses -> syncExpenses()
         }
     }
 
-    fun undoDelete(id: String) {
+    private fun deleteExpense(id: String) {
         viewModelScope.launch {
-            repository.undoDeleteExpense(id)
+            deleteExpenseUseCase(id)
+            _effect.send(ExpenseListUiEffect.ShowUndoSnackbar(id))
         }
     }
 
-    fun syncExpenses() {
+    private fun undoDelete(id: String) {
+        viewModelScope.launch {
+            undoDeleteExpenseUseCase(id)
+        }
+    }
+
+    private fun syncExpenses() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            repository.syncWithGoogleDrive()
-                .onSuccess {
-                    _syncMessage.value = "Synced successfully!"
-                }
+            syncExpensesUseCase()
                 .onFailure { error ->
-                    _syncMessage.value = "Sync failed: ${error.message}"
+                    _effect.send(ExpenseListUiEffect.ShowError("Sync failed: ${error.message}"))
                 }
             _isRefreshing.value = false
         }
-    }
-
-    fun clearSyncMessage() {
-        _syncMessage.value = null
-    }
-
-    fun getLastSyncTime(): Long {
-        return repository.getLastSyncTime()
     }
 }

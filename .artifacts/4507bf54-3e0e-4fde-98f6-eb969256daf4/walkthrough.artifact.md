@@ -1,38 +1,32 @@
-# Code Cleanup Walkthrough
+# Material 3 Save Action Refactor Walkthrough
 
-I have performed a thorough cleanup of the codebase to improve code quality, resolve linting warnings, and remove unused resources.
+I have updated the "Add/Edit Expense" screen to follow Material 3 design guidelines by moving the primary "Save" action to the `TopAppBar` and improving the overall layout hierarchy.
 
 ## Changes Made
 
-### 1. Resource Optimization
-- **[MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)**: Removed unused string resources `ok` and `save` to keep the resource files lean.
+### 1. Centralized Save Action
+- **[MODIFY] [AddExpenseScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/add_expense/AddExpenseScreen.kt)**:
+    - Added a "Save" text button to the `actions` block of the `TopAppBar`. This follows the Material 3 pattern for transactional screens where the primary confirmation action is always visible and reachable at the top.
+    - Removed the large, bottom-aligned "Save Expense" button that previously cluttered the screen and felt "too low."
 
-### 2. UI Code Refinement
-- **[MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)**:
-    - Removed several unused animation-related imports.
-    - Updated the date formatting logic to use the non-deprecated `day` property instead of `dayOfMonth`.
-    - Cleaned up exception handling by using the underscore (`_`) for unused exception parameters.
-- **[MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)**:
-    - Updated the `outlinedButtonBorder` call to the non-deprecated signature.
-    - Switched from the deprecated `kotlinx.datetime.Instant` typealias to the official `kotlin.time.Instant` where required (or handled via qualified names).
-    - Added missing trailing commas and explicitly named parameters for better code style.
+### 2. Improved Layout & Accessibility
+- **[MODIFY] [AddExpenseScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/add_expense/AddExpenseScreen.kt)**:
+    - **Scroll Support**: Wrapped the entire screen content in a `verticalScroll`. This ensures that all input fields and the category grid are accessible on smaller devices or when the on-screen keyboard is visible.
+    - **Adaptive Grid**: Replaced `LazyVerticalGrid` with a `FlowRow`. Since the category list is small (7 items), `FlowRow` allows the grid to live inside the scrollable column without nested scrolling conflicts, providing a smoother user experience.
+    - **Edge-to-Edge Padding**: Added `navigationBarsPadding()` to the root container to ensure the layout correctly respects system navigation bars.
 
-### 3. Repository and API Cleanup
-- **[MODIFY] [GoogleAuthRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/androidMain/kotlin/com/vvv/openexpensetracker/domain/repository/GoogleAuthRepositoryImpl.kt)**:
-    - Simplified token handling logic using `.let` to resolve IDE suggestions.
-    - Added clarifying parentheses to complex boolean expressions.
-    - Standardized trailing commas.
-- **[MODIFY] [GoogleDriveApi.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/source/remote/GoogleDriveApi.kt)**:
-    - Removed redundant null checks for `fileId` in the file creation flow, as the ID is guaranteed at that point in the logic.
-    - Added clarifying parentheses for readability.
+### 3. Resource Cleanup
+- **[MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)**: Added a clean `action_save` string resource.
 
 ## Verification Results
 
 ### Build Verification
 - **Success**: The project was built successfully with `:androidApp:assembleDebug`.
 
-### Linting Verification
-- Ran `analyze_file` on the modified files to confirm that the identified warnings (deprecated calls, unused parameters, etc.) have been resolved.
+### UI and UX Improvements
+- **Ergonomics**: The "Save" action is now in a standard location, making it easier for users to complete their task without hunting for a button at the bottom of the screen.
+- **Robustness**: The scrollable container prevents UI clipping when entering long descriptions or choosing categories on small screens.
+- **Consistency**: The category icons now use a flexible `FlowRow` that adapts to the available width while maintaining a consistent 3-column look.
 
-### Functional Verification
-- Verified that the UI text and date formatting remain correct after the refactor.
+> [!TIP]
+> This pattern is highly recommended for "Full-screen Dialog" style entry forms in Android, as it keeps the "Confirmation" (Save) and "Dismissal" (Back) actions unified in the app bar.

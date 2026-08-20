@@ -6,32 +6,30 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -56,10 +54,22 @@ import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
 import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
-import openexpensetracker.shared.generated.resources.*
+import openexpensetracker.shared.generated.resources.Res
+import openexpensetracker.shared.generated.resources.action_save
+import openexpensetracker.shared.generated.resources.add_btn_set_today
+import openexpensetracker.shared.generated.resources.add_error_amount
+import openexpensetracker.shared.generated.resources.add_label_amount
+import openexpensetracker.shared.generated.resources.add_label_category
+import openexpensetracker.shared.generated.resources.add_label_date
+import openexpensetracker.shared.generated.resources.add_label_description
+import openexpensetracker.shared.generated.resources.add_placeholder_amount
+import openexpensetracker.shared.generated.resources.add_placeholder_description
+import openexpensetracker.shared.generated.resources.add_title
+import openexpensetracker.shared.generated.resources.back
+import openexpensetracker.shared.generated.resources.edit_title
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddExpenseScreen(
     viewModel: AddExpenseViewModel,
@@ -69,15 +79,17 @@ fun AddExpenseScreen(
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
+    val scrollState = rememberScrollState()
 
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(expenseId) {
-        viewModel.loadExpense(expenseId)
+        viewModel.onIntent(AddExpenseIntent.LoadExpense(expenseId))
     }
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
+            viewModel.onIntent(AddExpenseIntent.ResetSaveState)
             navigateBack()
         }
     }
@@ -86,39 +98,47 @@ fun AddExpenseScreen(
         focusRequester.requestFocus()
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
+    ) {
+        TopAppBar(
+            title = { 
+                Text(
+                    if (expenseId == null) 
+                        stringResource(Res.string.add_title) 
+                    else 
+                        stringResource(Res.string.edit_title)
+                ) 
+            },
+            navigationIcon = {
+                IconButton(onClick = navigateBack) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = stringResource(Res.string.back))
+                }
+            },
+            actions = {
+                TextButton(onClick = { viewModel.onIntent(AddExpenseIntent.SaveExpense) }) {
                     Text(
-                        if (expenseId == null) 
-                            stringResource(Res.string.add_title) 
-                        else 
-                            stringResource(Res.string.edit_title)
-                    ) 
-                },
-                navigationIcon = {
-                    IconButton(onClick = navigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(Res.string.back))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+                        text = stringResource(Res.string.action_save),
+                        style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
             )
-        }
-    ) { innerPadding ->
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .verticalScroll(scrollState)
                 .padding(dimens.spacingNormal),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(dimens.spacingLarge)
         ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                // Large Amount Input
+            // Amount Input Section
+            Column {
                 Text(
                     text = stringResource(Res.string.add_label_amount),
                     style = typography.bodyMedium,
@@ -127,7 +147,7 @@ fun AddExpenseScreen(
                 Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                 OutlinedTextField(
                     value = uiState.amount,
-                    onValueChange = { viewModel.onAmountChanged(it) },
+                    onValueChange = { viewModel.onIntent(AddExpenseIntent.AmountChanged(it)) },
                     placeholder = { Text(stringResource(Res.string.add_placeholder_amount), style = typography.headlineMedium) },
                     prefix = { Text(uiState.currency.symbol, style = typography.headlineMedium) },
                     textStyle = typography.headlineMedium,
@@ -144,10 +164,10 @@ fun AddExpenseScreen(
                     },
                     singleLine = true
                 )
+            }
 
-                Spacer(modifier = Modifier.height(dimens.spacingNormal))
-
-                // Description Input
+            // Description Input Section
+            Column {
                 Text(
                     text = stringResource(Res.string.add_label_description),
                     style = typography.bodyMedium,
@@ -156,7 +176,7 @@ fun AddExpenseScreen(
                 Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                 OutlinedTextField(
                     value = uiState.description,
-                    onValueChange = { viewModel.onDescriptionChanged(it) },
+                    onValueChange = { viewModel.onIntent(AddExpenseIntent.DescriptionChanged(it)) },
                     placeholder = { Text(stringResource(Res.string.add_placeholder_description)) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(dimens.cornerRadiusLarge),
@@ -168,50 +188,48 @@ fun AddExpenseScreen(
                     },
                     singleLine = true
                 )
+            }
 
-                Spacer(modifier = Modifier.height(dimens.spacingNormal))
-
-                // Date Picker Trigger (Inline simple selector for KMP simplicity)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(dimens.cornerRadiusLarge))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                        .padding(dimens.spacingNormal),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.DateRange,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+            // Date Picker Section
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(dimens.cornerRadiusLarge))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                    .padding(dimens.spacingNormal),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(dimens.cornerRadiusNormal))
+                    Column {
+                        Text(
+                            stringResource(Res.string.add_label_date),
+                            style = typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(dimens.cornerRadiusNormal))
-                        Column {
-                            Text(
-                                stringResource(Res.string.add_label_date),
-                                style = typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = formatDate(uiState.date),
-                                style = typography.titleMedium
-                            )
-                        }
-                    }
-                    TextButton(onClick = {
-                        viewModel.onDateChanged(
-                            kotlin.time.Clock.System.now().toEpochMilliseconds()
+                        Text(
+                            text = formatDate(uiState.date),
+                            style = typography.titleMedium
                         )
-                    }) {
-                        Text(stringResource(Res.string.add_btn_set_today))
                     }
                 }
+                TextButton(onClick = {
+                    viewModel.onIntent(AddExpenseIntent.DateChanged(
+                        kotlin.time.Clock.System.now().toEpochMilliseconds()
+                    ))
+                }) {
+                    Text(stringResource(Res.string.add_btn_set_today))
+                }
+            }
 
-                Spacer(modifier = Modifier.height(dimens.spacingLarge))
-
-                // Category Selector
+            // Category Selector Section
+            Column {
                 Text(
                     text = stringResource(Res.string.add_label_category),
                     style = typography.bodyMedium,
@@ -219,19 +237,20 @@ fun AddExpenseScreen(
                 )
                 Spacer(modifier = Modifier.height(dimens.spacingSmall))
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(dimens.spacingSmall),
                     verticalArrangement = Arrangement.spacedBy(dimens.spacingSmall),
-                    modifier = Modifier.weight(1f)
+                    maxItemsInEachRow = 3
                 ) {
-                    items(Category.list) { cat ->
+                    Category.list.forEach { cat ->
                         val isSelected = uiState.category == cat
                         val color = getCategoryColor(cat)
                         val nameRes = getCategoryNameResource(cat)
+                        
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .weight(1f)
                                 .height(dimens.categoryIconSize)
                                 .clip(RoundedCornerShape(dimens.cornerRadiusLarge))
                                 .background(
@@ -243,7 +262,7 @@ fun AddExpenseScreen(
                                     color = if (isSelected) color else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                                     shape = RoundedCornerShape(dimens.cornerRadiusLarge)
                                 )
-                                .clickable { viewModel.onCategoryChanged(cat) },
+                                .clickable { viewModel.onIntent(AddExpenseIntent.CategoryChanged(cat)) },
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -273,22 +292,19 @@ fun AddExpenseScreen(
                             }
                         }
                     }
+                    
+                    // Add spacers to fill the last row if not full (optional but helps alignment)
+                    val remaining = 3 - (Category.list.size % 3)
+                    if (remaining < 3) {
+                        repeat(remaining) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
-
-            // Save Button
-            Button(
-                onClick = { viewModel.saveExpense() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(dimens.buttonHeight),
-                shape = RoundedCornerShape(dimens.cornerRadiusLarge),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Done, contentDescription = null)
-                Spacer(modifier = Modifier.width(dimens.spacingSmall))
-                Text(stringResource(Res.string.add_btn_save), style = typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            }
+            
+            // Extra bottom spacing to ensure we can scroll past everything
+            Spacer(modifier = Modifier.height(dimens.spacingExtraLarge))
         }
     }
 }

@@ -1,7 +1,6 @@
-- [x] Clean up `strings.xml`
-- [x] Clean up `ExpenseListScreen.kt`
-- [x] Clean up `SettingsScreen.kt`
-- [x] Clean up `AddExpenseScreen.kt`
-- [x] Clean up `GoogleAuthRepositoryImpl.kt` (Android)
-- [x] Clean up `GoogleDriveApi.kt`
-- [x] Verify build and functionality
+- [ ] Add `action_save` string to `strings.xml`
+- [ ] Refactor `AddExpenseScreen.kt`
+    - [ ] Move Save action to `TopAppBar`
+    - [ ] Remove bottom Save button
+    - [ ] Make screen scrollable and add navigation bars padding
+- [ ] Verify UI and functionality

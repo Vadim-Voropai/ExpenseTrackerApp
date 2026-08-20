@@ -35,8 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
@@ -48,7 +46,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.domain.model.Category
 import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
@@ -66,7 +64,7 @@ import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -90,13 +88,12 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ExpenseListScreen(
     viewModel: ExpenseListViewModel,
-    onNavigateToAddEdit: (String?) -> Unit
+    onNavigateToAddEdit: (String?) -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     val expenseDeletedMsg = stringResource(Res.string.expense_deleted)
     val undoMsg = stringResource(Res.string.action_undo)
@@ -117,122 +114,132 @@ fun ExpenseListScreen(
         isPlaying = uiState.isRefreshing
     )
 
-    LaunchedEffect(uiState.syncMessage) {
-        uiState.syncMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearSyncMessage()
-        }
-    }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                Color.Transparent
-                            )
-                        )
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collectLatest { effect ->
+            when (effect) {
+                is ExpenseListUiEffect.ShowUndoSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = expenseDeletedMsg,
+                        actionLabel = undoMsg
                     )
-                    .statusBarsPadding()
-                    .padding(horizontal = dimens.spacingNormal, vertical = dimens.spacingSmall)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = stringResource(Res.string.list_title),
-                        style = typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    IconButton(onClick = { viewModel.syncExpenses() }) {
-                        if (uiState.isRefreshing) {
-                            Image(
-                                painter = rememberLottiePainter(
-                                    composition = composition,
-                                    progress = { lottieProgress }
-                                ),
-                                contentDescription = stringResource(Res.string.settings_syncing),
-                                modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = stringResource(Res.string.list_sync_now))
-                        }
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.onIntent(ExpenseListIntent.UndoDelete(effect.expenseId))
                     }
                 }
-
-                Spacer(modifier = Modifier.height(dimens.spacingSmall))
-
-                // Search Bar
-                OutlinedTextField(
-                    value = uiState.searchQuery,
-                    onValueChange = { viewModel.setSearchQuery(it) },
-                    placeholder = { Text(stringResource(Res.string.list_search_placeholder)) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (uiState.searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.list_action_clear))
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(dimens.cornerRadiusNormal),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(dimens.spacingNormal))
-
-                // Category Chips
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(dimens.spacingSmall),
-                    contentPadding = PaddingValues(vertical = dimens.spacingExtraSmall)
-                ) {
-                    item {
-                        FilterChip(
-                            selected = uiState.selectedCategory == null,
-                            onClick = { viewModel.setCategoryFilter(null) },
-                            label = { Text(stringResource(Res.string.list_filter_all)) },
-                            shape = RoundedCornerShape(dimens.cornerRadiusExtraLarge)
-                        )
-                    }
-                    items(Category.list) { category ->
-                        val isSelected = uiState.selectedCategory == category
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { viewModel.setCategoryFilter(if (isSelected) null else category) },
-                            label = { Text(stringResource(getCategoryNameResource(category))) },
-                            shape = RoundedCornerShape(dimens.cornerRadiusExtraLarge),
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = getCategoryIcon(category),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(dimens.iconSizeSmall),
-                                    tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else getCategoryColor(
-                                        category
-                                    )
-                                )
-                            }
-                        )
-                    }
+                is ExpenseListUiEffect.ShowError -> {
+                    snackbarHostState.showSnackbar(effect.message)
                 }
             }
         }
-    ) { innerPadding ->
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Custom TopBar layout
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .statusBarsPadding()
+                .padding(horizontal = dimens.spacingNormal, vertical = dimens.spacingSmall)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(Res.string.list_title),
+                    style = typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                IconButton(onClick = { viewModel.onIntent(ExpenseListIntent.SyncExpenses) }) {
+                    if (uiState.isRefreshing) {
+                        Image(
+                            painter = rememberLottiePainter(
+                                composition = composition,
+                                progress = { lottieProgress }
+                            ),
+                            contentDescription = stringResource(Res.string.settings_syncing),
+                            modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
+                        )
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(Res.string.list_sync_now))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(dimens.spacingSmall))
+
+            // Search Bar
+            OutlinedTextField(
+                value = uiState.searchQuery,
+                onValueChange = { viewModel.onIntent(ExpenseListIntent.SearchQueryChanged(it)) },
+                placeholder = { Text(stringResource(Res.string.list_search_placeholder)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (uiState.searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onIntent(ExpenseListIntent.SearchQueryChanged("")) }) {
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.list_action_clear))
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(dimens.cornerRadiusNormal),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
+            )
+
+            Spacer(modifier = Modifier.height(dimens.spacingNormal))
+
+            // Category Chips
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(dimens.spacingSmall),
+                contentPadding = PaddingValues(vertical = dimens.spacingExtraSmall)
+            ) {
+                item {
+                    FilterChip(
+                        selected = uiState.selectedCategory == null,
+                        onClick = { viewModel.onIntent(ExpenseListIntent.CategoryFilterChanged(null)) },
+                        label = { Text(stringResource(Res.string.list_filter_all)) },
+                        shape = RoundedCornerShape(dimens.cornerRadiusExtraLarge)
+                    )
+                }
+                items(Category.list) { category ->
+                    val isSelected = uiState.selectedCategory == category
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { viewModel.onIntent(ExpenseListIntent.CategoryFilterChanged(if (isSelected) null else category)) },
+                        label = { Text(stringResource(getCategoryNameResource(category))) },
+                        shape = RoundedCornerShape(dimens.cornerRadiusExtraLarge),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = getCategoryIcon(category),
+                                contentDescription = null,
+                                modifier = Modifier.size(dimens.iconSizeSmall),
+                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else getCategoryColor(
+                                    category
+                                )
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        // Main List Content
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
         ) {
             if (uiState.expenses.isEmpty()) {
                 Column(
@@ -274,18 +281,9 @@ fun ExpenseListScreen(
                         SwipeToDismissBox(
                             state = dismissState,
                             modifier = Modifier.animateItem(),
-                            onDismiss = {
-                                if (it == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.deleteExpense(expense.id)
-                                    scope.launch {
-                                        val result = snackbarHostState.showSnackbar(
-                                            message = expenseDeletedMsg,
-                                            actionLabel = undoMsg
-                                        )
-                                        if (result == SnackbarResult.ActionPerformed) {
-                                            viewModel.undoDelete(expense.id)
-                                        }
-                                    }
+                            onDismiss = { direction ->
+                                if (direction == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.onIntent(ExpenseListIntent.DeleteExpense(expense.id))
                                 }
                             },
                             enableDismissFromStartToEnd = false,
@@ -326,7 +324,7 @@ fun ExpenseListScreen(
 @Composable
 fun ExpenseItemRow(
     expense: Expense,
-    currency: com.vvv.openexpensetracker.domain.model.AppCurrency,
+    currency: AppCurrency,
     onEdit: () -> Unit
 ) {
     val dimens = AppTheme.dimens
@@ -338,7 +336,7 @@ fun ExpenseItemRow(
             .clickable { onEdit() },
         shape = RoundedCornerShape(dimens.cornerRadiusLarge),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Row(

@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.domain.model.Expense
-import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
-import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
+import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -22,13 +22,13 @@ data class StatsUIState(
 )
 
 class StatsViewModel(
-    private val repository: ExpenseRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val getExpensesUseCase: GetExpensesUseCase,
+    getCurrencyUseCase: GetCurrencyUseCase
 ) : ViewModel() {
 
     val uiState: StateFlow<StatsUIState> = combine(
-        repository.getExpenses(),
-        preferencesRepository.currency
+        getExpensesUseCase(),
+        getCurrencyUseCase.currency
     ) { expenses, currency ->
         val total = expenses.sumOf { it.amount }
         val categories = expenses.groupBy { it.category }

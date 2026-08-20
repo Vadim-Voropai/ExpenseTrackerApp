@@ -5,13 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.domain.model.Category
 import com.vvv.openexpensetracker.domain.model.Expense
-import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
-import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
+import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
+import com.vvv.openexpensetracker.domain.usecase.SaveExpenseUseCase
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
@@ -30,8 +30,9 @@ data class AddExpenseUIState(
 )
 
 class AddExpenseViewModel(
-    private val repository: ExpenseRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val saveExpenseUseCase: SaveExpenseUseCase,
+    private val getExpensesUseCase: GetExpensesUseCase,
+    getCurrencyUseCase: GetCurrencyUseCase
 ) : ViewModel() {
 
     private var editingExpenseId: String? = null
@@ -39,7 +40,7 @@ class AddExpenseViewModel(
     private val _uiState = MutableStateFlow(AddExpenseUIState(date = getCurrentTimeMillis()))
     val uiState: StateFlow<AddExpenseUIState> = combine(
         _uiState,
-        preferencesRepository.currency
+        getCurrencyUseCase.currency
     ) { state, currency ->
         state.copy(currency = currency)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value)
@@ -48,7 +49,19 @@ class AddExpenseViewModel(
         return kotlin.time.Clock.System.now().toEpochMilliseconds()
     }
 
-    fun loadExpense(id: String?) {
+    fun onIntent(intent: AddExpenseIntent) {
+        when (intent) {
+            is AddExpenseIntent.LoadExpense -> loadExpense(intent.id)
+            is AddExpenseIntent.DescriptionChanged -> onDescriptionChanged(intent.text)
+            is AddExpenseIntent.AmountChanged -> onAmountChanged(intent.text)
+            is AddExpenseIntent.DateChanged -> onDateChanged(intent.timestamp)
+            is AddExpenseIntent.CategoryChanged -> onCategoryChanged(intent.category)
+            AddExpenseIntent.SaveExpense -> saveExpense()
+            AddExpenseIntent.ResetSaveState -> _uiState.update { it.copy(isSaved = false) }
+        }
+    }
+
+    private fun loadExpense(id: String?) {
         if (id == null) {
             editingExpenseId = null
             _uiState.update {
@@ -65,8 +78,9 @@ class AddExpenseViewModel(
             return
         }
         editingExpenseId = id
+        _uiState.update { it.copy(isSaved = false) }
         viewModelScope.launch {
-            val list = repository.getExpenses().firstOrNull() ?: emptyList()
+            val list = getExpensesUseCase().firstOrNull() ?: emptyList()
             val expense = list.find { it.id == id }
             if (expense != null) {
                 _uiState.update {
@@ -74,14 +88,15 @@ class AddExpenseViewModel(
                         description = expense.description,
                         amount = expense.amount.toString(),
                         date = expense.date,
-                        category = expense.category
+                        category = expense.category,
+                        isSaved = false
                     )
                 }
             }
         }
     }
 
-    fun onDescriptionChanged(text: String) {
+    private fun onDescriptionChanged(text: String) {
         _uiState.update {
             it.copy(
                 description = text,
@@ -90,7 +105,7 @@ class AddExpenseViewModel(
         }
     }
 
-    fun onAmountChanged(text: String) {
+    private fun onAmountChanged(text: String) {
         val filtered = text.filterIndexed { index, char ->
             char.isDigit() || (char == '.' && text.indexOf('.') == index)
         }
@@ -102,15 +117,15 @@ class AddExpenseViewModel(
         }
     }
 
-    fun onDateChanged(timestamp: Long) {
+    private fun onDateChanged(timestamp: Long) {
         _uiState.update { it.copy(date = timestamp) }
     }
 
-    fun onCategoryChanged(newCategory: String) {
+    private fun onCategoryChanged(newCategory: String) {
         _uiState.update { it.copy(category = newCategory) }
     }
 
-    fun saveExpense() {
+    private fun saveExpense() {
         val desc = _uiState.value.description.trim()
         val amtStr = _uiState.value.amount.trim()
 
@@ -133,7 +148,7 @@ class AddExpenseViewModel(
                 category = _uiState.value.category,
                 lastModified = now
             )
-            repository.saveExpense(expense)
+            saveExpenseUseCase(expense)
             _uiState.update { it.copy(isSaved = true) }
         }
     }

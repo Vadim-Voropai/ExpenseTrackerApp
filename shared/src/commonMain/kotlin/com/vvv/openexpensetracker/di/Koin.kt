@@ -10,16 +10,31 @@ import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
 import com.vvv.openexpensetracker.domain.repository.GoogleAuthRepository
 import com.vvv.openexpensetracker.domain.repository.GoogleDriveRepository
 import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
+import com.vvv.openexpensetracker.domain.usecase.DeleteExpenseUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetAuthStateUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetLastSyncTimeUseCase
+import com.vvv.openexpensetracker.domain.usecase.HandleSignInResultUseCase
+import com.vvv.openexpensetracker.domain.usecase.SaveExpenseUseCase
+import com.vvv.openexpensetracker.domain.usecase.SetCurrencyUseCase
+import com.vvv.openexpensetracker.domain.usecase.SignInUseCase
+import com.vvv.openexpensetracker.domain.usecase.SignOutUseCase
+import com.vvv.openexpensetracker.domain.usecase.SyncExpensesUseCase
+import com.vvv.openexpensetracker.domain.usecase.UndoDeleteExpenseUseCase
 import com.vvv.openexpensetracker.presentation.MainViewModel
 import com.vvv.openexpensetracker.presentation.screens.add_expense.AddExpenseViewModel
 import com.vvv.openexpensetracker.presentation.screens.expenses.ExpenseListViewModel
 import com.vvv.openexpensetracker.presentation.screens.settings.SettingsViewModel
 import com.vvv.openexpensetracker.presentation.screens.stats.StatsViewModel
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.auth.*
-import io.ktor.client.plugins.auth.providers.*
+import io.ktor.client.plugins.auth.Auth
+import io.ktor.client.plugins.auth.providers.BearerTokens
+import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.logging.LogLevel
+import io.ktor.client.plugins.logging.Logger
+import io.ktor.client.plugins.logging.Logging
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -91,17 +106,34 @@ val dataModule = module {
     single<PreferencesRepository> { PreferencesRepositoryImpl() }
 }
 
+val useCaseModule = module {
+    single { GetExpensesUseCase(get()) }
+    single { SaveExpenseUseCase(get()) }
+    single { DeleteExpenseUseCase(get()) }
+    single { UndoDeleteExpenseUseCase(get()) }
+    single { SyncExpensesUseCase(get()) }
+    single { GetLastSyncTimeUseCase(get()) }
+    
+    single { SignInUseCase(get()) }
+    single { SignOutUseCase(get()) }
+    single { GetAuthStateUseCase(get()) }
+    single { HandleSignInResultUseCase(get()) }
+    
+    single { GetCurrencyUseCase(get()) }
+    single { SetCurrencyUseCase(get()) }
+}
+
 val viewModelModule = module {
-    factory { ExpenseListViewModel(get(), preferencesRepository = get()) }
-    factory { AddExpenseViewModel(get(), preferencesRepository = get()) }
-    factory { StatsViewModel(get(), preferencesRepository = get()) }
-    factory { SettingsViewModel(get(), get(), get()) }
-    factory { MainViewModel(get(), get()) }
+    factory { ExpenseListViewModel(get(), get(), get(), get(), get()) }
+    factory { AddExpenseViewModel(get(), get(), get()) }
+    factory { StatsViewModel(get(), get()) }
+    factory { SettingsViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    factory { MainViewModel(get(), get(), get(), get()) }
 }
 
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) {
     startKoin {
         appDeclaration()
-        modules(dataModule, viewModelModule, getPlatformModule())
+        modules(dataModule, useCaseModule, viewModelModule, getPlatformModule())
     }
 }

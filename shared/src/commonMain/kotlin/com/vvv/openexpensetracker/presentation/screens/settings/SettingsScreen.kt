@@ -29,8 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -54,6 +52,7 @@ import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import openexpensetracker.shared.generated.resources.*
@@ -62,11 +61,13 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    snackbarHostState: SnackbarHostState
+) {
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // Lottie Composition
     val composition by rememberLottieComposition {
@@ -84,28 +85,26 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         isPlaying = uiState.isSyncing,
     )
 
-    LaunchedEffect(uiState.syncMessage) {
-        uiState.syncMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearMessage()
+    LaunchedEffect(viewModel) {
+        viewModel.effect.collectLatest { effect ->
+            when (effect) {
+                is SettingsUiEffect.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(effect.message)
+                }
+            }
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(Res.string.settings_title), fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
+    Column(modifier = Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text(stringResource(Res.string.settings_title), fontWeight = FontWeight.Bold) },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.background
             )
-        }
-    ) { innerPadding ->
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
                 .padding(dimens.spacingNormal),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -200,7 +199,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                             DropdownMenuItem(
                                 text = { Text("${cur.name} (${cur.symbol})") },
                                 onClick = {
-                                    viewModel.setCurrency(cur)
+                                    viewModel.onIntent(SettingsIntent.SetCurrency(cur))
                                     expanded = false
                                 }
                             )
@@ -221,7 +220,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 if (uiState.isSignedIn) {
                     // Sync Now Button
                     Button(
-                        onClick = { viewModel.syncNow() },
+                        onClick = { viewModel.onIntent(SettingsIntent.SyncNow) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(dimens.buttonHeight),
@@ -270,7 +269,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
 
                     // Sign Out Button
                     OutlinedButton(
-                        onClick = { viewModel.signOut() },
+                        onClick = { viewModel.onIntent(SettingsIntent.SignOut) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(dimens.buttonHeight),
@@ -287,7 +286,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 } else {
                     // Sign In Button
                     Button(
-                        onClick = { viewModel.signIn() },
+                        onClick = { viewModel.onIntent(SettingsIntent.SignIn) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(dimens.buttonHeight),

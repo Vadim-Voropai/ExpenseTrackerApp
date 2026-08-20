@@ -2,8 +2,10 @@ package com.vvv.openexpensetracker.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
 import com.vvv.openexpensetracker.domain.repository.GoogleAuthRepository
+import com.vvv.openexpensetracker.domain.usecase.GetAuthStateUseCase
+import com.vvv.openexpensetracker.domain.usecase.HandleSignInResultUseCase
+import com.vvv.openexpensetracker.domain.usecase.SyncExpensesUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -16,13 +18,15 @@ data class MainUIState(
 )
 
 class MainViewModel(
-    private val authRepository: GoogleAuthRepository,
-    private val expenseRepository: ExpenseRepository
+    private val getAuthStateUseCase: GetAuthStateUseCase,
+    private val handleSignInResultUseCase: HandleSignInResultUseCase,
+    private val syncExpensesUseCase: SyncExpensesUseCase,
+    private val authRepository: GoogleAuthRepository // Still needed for signInHandler
 ) : ViewModel() {
 
     val uiState: StateFlow<MainUIState> = combine(
-        authRepository.userEmail,
-        authRepository.userName
+        getAuthStateUseCase.userEmail,
+        getAuthStateUseCase.userName
     ) { email, name ->
         MainUIState(
             userEmail = email,
@@ -33,9 +37,15 @@ class MainViewModel(
     init {
         // Automatic sync at app launch
         viewModelScope.launch {
-            if (authRepository.isSignedIn()) {
-                expenseRepository.syncWithGoogleDrive()
+            if (getAuthStateUseCase.isSignedIn()) {
+                syncExpensesUseCase()
             }
+        }
+    }
+
+    fun onIntent(intent: MainIntent) {
+        when (intent) {
+            is MainIntent.HandleSignInResult -> handleSignInResult(intent.data)
         }
     }
 
@@ -43,7 +53,7 @@ class MainViewModel(
         authRepository.setSignInHandler(handler)
     }
 
-    fun handleSignInResult(data: Any?) {
-        authRepository.handleSignInResult(data)
+    private fun handleSignInResult(data: Any?) {
+        handleSignInResultUseCase(data)
     }
 }

@@ -1,46 +1,28 @@
-# Code Cleanup: Unused Imports, Strings, and Values
+# Align Save Action with Material 3 Guidelines
 
-This plan focuses on cleaning up the codebase by removing unused imports, redundant string resources, and resolving minor linting warnings to improve code quality and maintainability.
+This plan improves the "Add/Edit Expense" user experience by moving the primary "Save" action to the `TopAppBar`, following standard Material 3 patterns for data-entry screens. This also fixes the issue of the button being positioned "too low" on the screen.
 
 ## Proposed Changes
 
 ### [Resources]
 
 #### [MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)
-- Remove unused strings: `ok`, `save`.
+- Re-add a generic `action_save` string: "Save".
 
-### [UI Screens]
-
-#### [MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)
-- Remove unused imports (e.g., `AnimatedVisibility`, `tween`, `fadeOut`, `shrinkVertically` if not used).
-- Fix `dayOfMonth` deprecation warning by using `day`.
-- Remove unused parameter `e` in catch blocks.
-
-#### [MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)
-- Fix `outlinedButtonBorder` deprecation warning.
-- Fix `Instant` deprecation warning by using `kotlin.time.Instant`.
-- Remove unused parameter `e` in catch blocks.
-- Add missing trailing commas for consistency.
+### [Presentation Layer - UI]
 
 #### [MODIFY] [AddExpenseScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/add_expense/AddExpenseScreen.kt)
-- Remove unused imports.
-
-### [Repositories]
-
-#### [MODIFY] [GoogleAuthRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/androidMain/kotlin/com/vvv/openexpensetracker/domain/repository/GoogleAuthRepositoryImpl.kt)
-- Add missing trailing commas.
-- Add clarifying parentheses for complex conditions.
-- Simplify `if (newToken != null)` where applicable.
-
-#### [MODIFY] [GoogleDriveApi.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/source/remote/GoogleDriveApi.kt)
-- Remove redundant null checks (`if (fileId != null)` when it's always true).
-- Add clarifying parentheses.
+- **TopAppBar**: Add an `actions` block containing a `TextButton` that triggers `AddExpenseIntent.SaveExpense`. This makes the action always visible and easily accessible.
+- **Main Layout**:
+    - Remove the large `Button` from the bottom of the screen.
+    - Add `navigationBarsPadding()` to the root container to ensure the UI respects system bars.
+    - Wrap the content in a `verticalScroll` to ensure usability on smaller screens or when the keyboard is open.
+    - Adjust the `Column` arrangement from `SpaceBetween` to a standard top-aligned flow with spacing.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `:androidApp:assembleDebug` to ensure the project still builds correctly.
-- Run `analyze_file` on modified files to verify that the identified warnings have been resolved.
-
 ### Manual Verification
-- Briefly verify that the UI still behaves as expected and no strings are missing.
+1.  **UI Check**: Open the "Add Expense" screen. Verify that the "Save" button is now in the top right corner of the app bar.
+2.  **Functionality**: Input data and tap the "Save" button in the app bar. Ensure the expense is saved and you are navigated back to the list.
+3.  **Keyboard Handling**: Open the keyboard and verify that you can still scroll through the category grid if needed.
+4.  **Edge-to-Edge**: Verify that the bottom of the screen (the category grid) has proper padding and is not clipped by the system navigation bar.
