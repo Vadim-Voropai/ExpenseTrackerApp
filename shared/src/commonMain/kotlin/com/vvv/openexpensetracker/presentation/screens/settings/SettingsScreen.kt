@@ -81,7 +81,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val lottieProgress by animateLottieCompositionAsState(
         composition = composition,
         iterations = Int.MAX_VALUE,
-        isPlaying = uiState.isSyncing
+        isPlaying = uiState.isSyncing,
     )
 
     LaunchedEffect(uiState.syncMessage) {
@@ -183,7 +183,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = dimens.spacingSmall)
                 )
-                var expanded by remember { mutableStateOf(false) }
+                var expanded by remember { mutableStateOf(value = false) }
                 val currencies = AppCurrency.entries
                 Box {
                     OutlinedButton(
@@ -276,7 +276,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                             .height(dimens.buttonHeight),
                         shape = RoundedCornerShape(dimens.cornerRadiusLarge),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                             brush = androidx.compose.ui.graphics.SolidColor(
                                 MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
                             )
@@ -334,11 +334,11 @@ fun formatLastSyncTime(timestamp: Long): String {
     
     val datePart = formatDate(timestamp)
     val timePart = try {
-        val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(timestamp)
+        val instant = kotlin.time.Instant.fromEpochMilliseconds(timestamp)
         val tz = TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(tz)
         "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         ""
     }
     

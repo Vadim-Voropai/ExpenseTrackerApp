@@ -1,8 +1,7 @@
-- [x] Centralize strings in `strings.xml`
-- [x] Refactor `HomeScreen.kt` to use resources
-- [x] Refactor `ExpenseListScreen.kt` to use resources
-- [x] Refactor `AddExpenseScreen.kt` to use resources
-- [x] Refactor `SettingsScreen.kt` to use resources
-- [x] Refactor `StatsScreen.kt` to use resources
-- [x] Handle Category name localization
-- [x] Verify build and UI
+- [x] Clean up `strings.xml`
+- [x] Clean up `ExpenseListScreen.kt`
+- [x] Clean up `SettingsScreen.kt`
+- [x] Clean up `AddExpenseScreen.kt`
+- [x] Clean up `GoogleAuthRepositoryImpl.kt` (Android)
+- [x] Clean up `GoogleDriveApi.kt`
+- [x] Verify build and functionality

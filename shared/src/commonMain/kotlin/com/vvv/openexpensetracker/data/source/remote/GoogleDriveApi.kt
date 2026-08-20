@@ -28,7 +28,7 @@ class GoogleDriveApi(private val client: HttpClient) {
     }
 
     private fun Exception.handleUnauthorized() {
-        if (this is ClientRequestException && response.status == HttpStatusCode.Unauthorized) {
+        if ((this is ClientRequestException) && response.status == HttpStatusCode.Unauthorized) {
             throw UnauthorizedException()
         }
     }
@@ -120,9 +120,7 @@ class GoogleDriveApi(private val client: HttpClient) {
             val fileId = createResponse.id
 
             // Initialize with an empty JSON array to ensure a valid starting state
-            if (fileId != null) {
-                updateExpensesFile(fileId, "[]")
-            }
+            updateExpensesFile(fileId, "[]")
 
             fileId
         } catch (e: Exception) {

@@ -24,7 +24,7 @@ import kotlinx.coroutines.tasks.await
 class GoogleAuthRepositoryImpl(
     private val context: Context,
     private val httpClient: HttpClient,
-    private val secureStorage: SecureStorage
+    private val secureStorage: SecureStorage,
 ) : GoogleAuthRepository {
     private val _accessToken = MutableStateFlow<String?>(null)
     override val accessToken: StateFlow<String?> = _accessToken.asStateFlow()
@@ -92,7 +92,7 @@ class GoogleAuthRepositoryImpl(
     }
 
     override fun handleSignInResult(data: Any?) {
-        val intent = data as? Intent ?: return
+        val intent = (data as? Intent) ?: return
         try {
             val authorizationResult = Identity.getAuthorizationClient(context)
                 .getAuthorizationResultFromIntent(intent)
@@ -163,9 +163,7 @@ class GoogleAuthRepositoryImpl(
                 .await()
 
             val newToken = result.accessToken
-            if (newToken != null) {
-                setSession(newToken, _userEmail.value, _userName.value)
-            }
+            newToken?.let { setSession(it, _userEmail.value, _userName.value) }
             newToken
         } catch (e: Exception) {
             e.printStackTrace()

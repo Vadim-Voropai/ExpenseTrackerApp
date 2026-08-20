@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <resources>
     <string name="app_name">Open Expense Tracker</string>
-    <string name="ok">OK</string>
     <string name="back">Back</string>
-    <string name="save">Save</string>
     <string name="never">Never</string>
     <string name="at">at</string>
 
@@ -23,6 +21,8 @@
     <string name="list_empty_no_matching">No matching expenses</string>
     <string name="list_empty_subtitle">Tap the "+" button to log a new purchase.</string>
     <string name="list_action_delete">Delete</string>
+    <string name="expense_deleted">Expense deleted</string>
+    <string name="action_undo">Undo</string>
 
     <!-- Add/Edit Expense -->
     <string name="add_title">Add Expense</string>

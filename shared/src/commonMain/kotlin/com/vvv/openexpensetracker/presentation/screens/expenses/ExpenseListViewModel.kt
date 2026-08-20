@@ -83,6 +83,12 @@ class ExpenseListViewModel(
         }
     }
 
+    fun undoDelete(id: String) {
+        viewModelScope.launch {
+            repository.undoDeleteExpense(id)
+        }
+    }
+
     fun syncExpenses() {
         viewModelScope.launch {
             _isRefreshing.value = true

@@ -79,6 +79,16 @@ class ExpenseRepositoryImpl(
         }
     }
 
+    override suspend fun undoDeleteExpense(id: String) {
+        val expense = queries.getExpenseById(id).executeAsOneOrNull()?.toExpense()
+        if (expense != null) {
+            saveExpense(expense.copy(
+                isDeleted = false,
+                lastModified = Clock.System.now().toEpochMilliseconds()
+            ))
+        }
+    }
+
     private fun triggerAutoSync() {
         if (googleAuthRepository.isSignedIn()) {
             repositoryScope.launch {

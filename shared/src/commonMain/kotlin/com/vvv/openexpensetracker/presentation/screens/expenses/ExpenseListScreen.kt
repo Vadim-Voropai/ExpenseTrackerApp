@@ -38,12 +38,17 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,10 +66,23 @@ import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import openexpensetracker.shared.generated.resources.*
+import openexpensetracker.shared.generated.resources.Res
+import openexpensetracker.shared.generated.resources.action_undo
+import openexpensetracker.shared.generated.resources.expense_deleted
+import openexpensetracker.shared.generated.resources.list_action_clear
+import openexpensetracker.shared.generated.resources.list_action_delete
+import openexpensetracker.shared.generated.resources.list_empty_no_expenses
+import openexpensetracker.shared.generated.resources.list_empty_no_matching
+import openexpensetracker.shared.generated.resources.list_empty_subtitle
+import openexpensetracker.shared.generated.resources.list_filter_all
+import openexpensetracker.shared.generated.resources.list_search_placeholder
+import openexpensetracker.shared.generated.resources.list_sync_now
+import openexpensetracker.shared.generated.resources.list_title
+import openexpensetracker.shared.generated.resources.settings_syncing
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 
@@ -78,6 +96,10 @@ fun ExpenseListScreen(
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    val expenseDeletedMsg = stringResource(Res.string.expense_deleted)
+    val undoMsg = stringResource(Res.string.action_undo)
 
     // Lottie Composition
     val composition by rememberLottieComposition {
@@ -247,12 +269,53 @@ fun ExpenseListScreen(
                     verticalArrangement = Arrangement.spacedBy(dimens.spacingSmall)
                 ) {
                     items(uiState.expenses, key = { it.id }) { expense ->
-                        ExpenseItemRow(
-                            expense = expense,
-                            currency = uiState.currency,
-                            onEdit = { onNavigateToAddEdit(expense.id) },
-                            onDelete = { viewModel.deleteExpense(expense.id) }
-                        )
+                        val dismissState = rememberSwipeToDismissBoxState()
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            modifier = Modifier.animateItem(),
+                            onDismiss = {
+                                if (it == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.deleteExpense(expense.id)
+                                    scope.launch {
+                                        val result = snackbarHostState.showSnackbar(
+                                            message = expenseDeletedMsg,
+                                            actionLabel = undoMsg
+                                        )
+                                        if (result == SnackbarResult.ActionPerformed) {
+                                            viewModel.undoDelete(expense.id)
+                                        }
+                                    }
+                                }
+                            },
+                            enableDismissFromStartToEnd = false,
+                            backgroundContent = {
+                                val color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(dimens.cornerRadiusLarge))
+                                        .background(color)
+                                        .padding(horizontal = dimens.spacingNormal),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = stringResource(Res.string.list_action_delete),
+                                        tint = MaterialTheme.colorScheme.onError
+                                    )
+                                }
+                            }
+                        ) {
+                            ExpenseItemRow(
+                                expense = expense,
+                                currency = uiState.currency,
+                                onEdit = { onNavigateToAddEdit(expense.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -264,8 +327,7 @@ fun ExpenseListScreen(
 fun ExpenseItemRow(
     expense: Expense,
     currency: com.vvv.openexpensetracker.domain.model.AppCurrency,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onEdit: () -> Unit
 ) {
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
@@ -323,7 +385,7 @@ fun ExpenseItemRow(
                 )
             }
 
-            // Amount & Actions
+            // Amount
             Column(
                 horizontalAlignment = Alignment.End
             ) {
@@ -332,17 +394,6 @@ fun ExpenseItemRow(
                     style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary
                 )
-                Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
-                Row(horizontalArrangement = Arrangement.End) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(Res.string.list_action_delete),
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
-                        modifier = Modifier
-                            .size(dimens.iconSizeNormal)
-                            .clickable { onDelete() }
-                    )
-                }
             }
         }
     }
@@ -356,9 +407,9 @@ fun formatDate(timestamp: Long): String {
         val dateTime = instant.toLocalDateTime(tz)
 
         val month = dateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
-        val day = dateTime.dayOfMonth.toString().padStart(2, '0')
+        val day = dateTime.day.toString().padStart(2, '0')
         "$month $day, ${dateTime.year}"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         "Unknown Date"
     }
 }
