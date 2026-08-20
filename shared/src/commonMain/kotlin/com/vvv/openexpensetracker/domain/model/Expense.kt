@@ -9,5 +9,6 @@ data class Expense(
     val amount: Double,
     val date: Long, // milliseconds timestamp
     val category: String,
-    val lastModified: Long // milliseconds timestamp for syncing conflict resolution
+    val lastModified: Long, // milliseconds timestamp for syncing conflict resolution
+    val isDeleted: Boolean = false
 )

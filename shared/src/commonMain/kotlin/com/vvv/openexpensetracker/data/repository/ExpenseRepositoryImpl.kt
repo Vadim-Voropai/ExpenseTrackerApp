@@ -63,14 +63,20 @@ class ExpenseRepositoryImpl(
             amount = expense.amount,
             date = expense.date,
             category = expense.category,
-            lastModified = expense.lastModified
+            lastModified = expense.lastModified,
+            isDeleted = if (expense.isDeleted) 1L else 0L
         )
         triggerAutoSync()
     }
 
     override suspend fun deleteExpense(id: String) {
-        queries.deleteExpense(id)
-        triggerAutoSync()
+        val expense = queries.getExpenseById(id).executeAsOneOrNull()?.toExpense()
+        if (expense != null) {
+            saveExpense(expense.copy(
+                isDeleted = true,
+                lastModified = Clock.System.now().toEpochMilliseconds()
+            ))
+        }
     }
 
     private fun triggerAutoSync() {
@@ -87,7 +93,11 @@ class ExpenseRepositoryImpl(
         }
 
         return try {
-                val localList = getExpenses().first()
+            // Sync all items including tombstones
+            val localList = queries.getAllExpensesForSync()
+                .executeAsList()
+                .map { it.toExpense() }
+                
             var fileId = googleDriveRepository.findExpensesFile()
 
             val mergedList = if (fileId != null) {
@@ -132,7 +142,8 @@ class ExpenseRepositoryImpl(
                     amount = expense.amount,
                     date = expense.date,
                     category = expense.category,
-                    lastModified = expense.lastModified
+                    lastModified = expense.lastModified,
+                    isDeleted = if (expense.isDeleted) 1L else 0L
                 )
             }
         }
@@ -157,7 +168,8 @@ class ExpenseRepositoryImpl(
             amount = amount,
             date = date,
             category = category,
-            lastModified = lastModified
+            lastModified = lastModified,
+            isDeleted = isDeleted != 0L
         )
     }
 }

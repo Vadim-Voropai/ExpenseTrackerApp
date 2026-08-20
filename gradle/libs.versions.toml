@@ -50,6 +50,7 @@ androidx-security-crypto = { module = "androidx.security:security-crypto", versi
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 androidx-cred-api = { group = "androidx.credentials", name = "credentials", version.ref = "androidx-credentials" }
 androidx-cred-play = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "androidx-credentials" }
+compottie = { module = "io.github.alexzhirkevich:compottie", version = "2.2.4" }
 sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
 sqldelight-androidDriver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-nativeDriver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }

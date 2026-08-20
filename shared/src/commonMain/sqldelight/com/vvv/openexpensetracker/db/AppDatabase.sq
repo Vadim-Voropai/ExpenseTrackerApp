@@ -4,18 +4,22 @@ CREATE TABLE ExpenseEntity (
     amount REAL NOT NULL,
     date INTEGER NOT NULL,
     category TEXT NOT NULL,
-    lastModified INTEGER NOT NULL
+    lastModified INTEGER NOT NULL,
+    isDeleted INTEGER NOT NULL DEFAULT 0
 );
 
 getExpenses:
-SELECT * FROM ExpenseEntity ORDER BY date DESC;
+SELECT * FROM ExpenseEntity WHERE isDeleted = 0 ORDER BY date DESC;
+
+getAllExpensesForSync:
+SELECT * FROM ExpenseEntity;
 
 getExpenseById:
 SELECT * FROM ExpenseEntity WHERE id = ?;
 
 insertExpense:
-INSERT OR REPLACE INTO ExpenseEntity(id, description, amount, date, category, lastModified)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO ExpenseEntity(id, description, amount, date, category, lastModified, isDeleted)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 deleteExpense:
 DELETE FROM ExpenseEntity WHERE id = ?;

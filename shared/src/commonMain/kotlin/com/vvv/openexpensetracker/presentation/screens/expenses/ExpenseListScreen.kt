@@ -1,5 +1,6 @@
 package com.vvv.openexpensetracker.presentation.screens.expenses
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,21 +21,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -43,15 +36,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,11 +56,17 @@ import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import openexpensetracker.shared.generated.resources.Res
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun ExpenseListScreen(
     viewModel: ExpenseListViewModel,
@@ -77,35 +75,33 @@ fun ExpenseListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    var showSyncAlert by remember { mutableStateOf(false) }
-
-    LaunchedEffect(uiState.syncMessage) {
-        if (uiState.syncMessage != null) {
-            showSyncAlert = true
+    // Lottie Composition
+    val composition by rememberLottieComposition {
+        try {
+            val bytes = Res.readBytes("files/sync_animation.json")
+            LottieCompositionSpec.JsonString(bytes.decodeToString())
+        } catch (e: Exception) {
+            LottieCompositionSpec.JsonString("{}")
         }
     }
 
-    if (showSyncAlert && uiState.syncMessage != null) {
-        AlertDialog(
-            onDismissRequest = {
-                showSyncAlert = false
-                viewModel.clearSyncMessage()
-            },
-            title = { Text("Google Drive Sync") },
-            text = { Text(uiState.syncMessage ?: "") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSyncAlert = false
-                    viewModel.clearSyncMessage()
-                }) {
-                    Text("OK")
-                }
-            }
-        )
+    val lottieProgress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = Int.MAX_VALUE,
+        isPlaying = uiState.isRefreshing
+    )
+
+    LaunchedEffect(uiState.syncMessage) {
+        uiState.syncMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSyncMessage()
+        }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column(
                 modifier = Modifier
@@ -133,7 +129,14 @@ fun ExpenseListScreen(
                     )
                     IconButton(onClick = { viewModel.syncExpenses() }) {
                         if (uiState.isRefreshing) {
-                            CircularProgressIndicator(modifier = Modifier.size(dimens.iconSizeNormal), strokeWidth = dimens.strokeWidthSmall)
+                            Image(
+                                painter = rememberLottiePainter(
+                                    composition = composition,
+                                    progress = { lottieProgress }
+                                ),
+                                contentDescription = "Syncing",
+                                modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
+                            )
                         } else {
                             Icon(Icons.Default.Refresh, contentDescription = "Sync Now")
                         }

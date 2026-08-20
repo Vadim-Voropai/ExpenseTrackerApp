@@ -1,5 +1,6 @@
 package com.vvv.openexpensetracker.presentation.screens.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,12 +19,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,8 +30,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,43 +50,48 @@ import androidx.compose.ui.text.style.TextAlign
 import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.presentation.screens.expenses.formatDate
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import openexpensetracker.shared.generated.resources.Res
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    var showSyncAlert by remember { mutableStateOf(false) }
-
-    LaunchedEffect(uiState.syncMessage) {
-        if (uiState.syncMessage != null) {
-            showSyncAlert = true
+    // Lottie Composition
+    val composition by rememberLottieComposition {
+        try {
+            val bytes = Res.readBytes("files/sync_animation.json")
+            LottieCompositionSpec.JsonString(bytes.decodeToString())
+        } catch (e: Exception) {
+            LottieCompositionSpec.JsonString("{}")
         }
     }
 
-    if (showSyncAlert && uiState.syncMessage != null) {
-        AlertDialog(
-            onDismissRequest = {
-                showSyncAlert = false
-                viewModel.clearMessage()
-            },
-            title = { Text("Google Drive Backup") },
-            text = { Text(uiState.syncMessage ?: "") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showSyncAlert = false
-                    viewModel.clearMessage()
-                }) {
-                    Text("OK")
-                }
-            }
-        )
+    val lottieProgress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = Int.MAX_VALUE,
+        isPlaying = uiState.isSyncing
+    )
+
+    LaunchedEffect(uiState.syncMessage) {
+        uiState.syncMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMessage()
+        }
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
@@ -224,7 +229,14 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         enabled = !uiState.isSyncing
                     ) {
                         if (uiState.isSyncing) {
-                            CircularProgressIndicator(modifier = Modifier.size(dimens.iconSizeNormal), strokeWidth = dimens.strokeWidthSmall)
+                            Image(
+                                painter = rememberLottiePainter(
+                                    composition = composition,
+                                    progress = { lottieProgress }
+                                ),
+                                contentDescription = "Syncing",
+                                modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
+                            )
                         } else {
                             Icon(Icons.Default.Refresh, contentDescription = "Sync Now")
                             Spacer(modifier = Modifier.width(dimens.spacingSmall))
@@ -319,7 +331,7 @@ fun formatLastSyncTime(timestamp: Long): String {
     if (timestamp == 0L) return "Never"
     return try {
         val instant = kotlinx.datetime.Instant.fromEpochMilliseconds(timestamp)
-        val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
+        val tz = TimeZone.currentSystemDefault()
         val localDateTime = instant.toLocalDateTime(tz)
         val time =
             "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"

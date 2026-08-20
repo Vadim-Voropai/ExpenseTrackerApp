@@ -1,50 +1,53 @@
-# Cache Google Drive Folder and File IDs
+# Refactor Sync Feedback: Snackbar and Lottie Animation
 
-This plan implements local caching of Google Drive folder and file IDs to reduce API calls and improve synchronization performance.
+This plan replaces the intrusive sync alert dialogs with non-intrusive Snackbar messages for errors and adds a Lottie animation to indicate sync progress.
+
+## User Review Required
+
+> [!IMPORTANT]
+> - **Lottie Dependency**: I will add `io.github.alexzhirkevich:compottie:2.2.4` to support Lottie in Compose Multiplatform.
+> - **Animation File**: Since I cannot create a complex Lottie JSON file from scratch, I will set up the code to use a file named `sync_animation.json` in the `composeResources/files` directory. **You will need to provide this Lottie JSON file.**
+> - **Feedback Logic**:
+>     - **Success**: No visual feedback other than the animation stopping.
+>     - **Error**: A Snackbar will appear at the bottom of the screen with the error message.
 
 ## Proposed Changes
 
-### [Core]
+### [Infrastructure]
 
-#### [MODIFY] [Constants.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/core/Constants.kt)
-- Add `KEY_FOLDER_ID = "google_drive_folder_id"`
-- Add `KEY_FILE_ID = "google_drive_file_id"`
+#### [MODIFY] [libs.versions.toml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/gradle/libs.versions.toml)
+- Add `compottie = "2.2.4"`.
+- Add `compottie-library = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }`.
 
-### [Remote Data Source]
+#### [MODIFY] [shared/build.gradle.kts](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/build.gradle.kts)
+- Add `libs.compottie.library` to `commonMain` dependencies.
 
-#### [MODIFY] [GoogleDriveApi.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/source/remote/GoogleDriveApi.kt)
-- Make `getAppFolder(createIfMissing: Boolean)` public so the repository can manage it.
-- Update `findExpensesFile(folderId: String? = null)` to use the provided `folderId` if available, bypassing folder discovery.
-- Update `createExpensesFile(folderId: String)` to require a `folderId`, ensuring the repository has already resolved it.
+### [Presentation Layer - ViewModels]
 
-### [Data Layer]
+#### [MODIFY] [SettingsViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsViewModel.kt)
+- Update `syncNow()`: Only set `_syncMessage` on failure.
 
-#### [MODIFY] [GoogleDriveRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/GoogleDriveRepositoryImpl.kt)
-- Inject `LocalStorage`.
-- **`findExpensesFile()`**:
-    1. Check `LocalStorage` for `KEY_FILE_ID`. If found, return it.
-    2. If not, check `LocalStorage` for `KEY_FOLDER_ID`.
-    3. Call `api.findExpensesFile(folderId)`.
-    4. If a file is found, save its ID to `LocalStorage`.
-    5. (Optional) If the folder was discovered during this call, we might need a way to capture it. I'll update `findExpensesFile` to return both or just ensure `getAppFolder` is called first if needed.
-- **`createExpensesFile()`**:
-    1. Get `folderId` (from cache or `api.getAppFolder(true)`).
-    2. Call `api.createExpensesFile(folderId)`.
-    3. Save both IDs to `LocalStorage`.
-- **Error Handling**: Catch `ClientRequestException` with `404 Not Found` in `downloadExpensesFile` and `updateExpensesFile`. If this happens, it means the cached ID is dead. Clear the cache and throw an exception to trigger a retry/re-discovery.
+#### [MODIFY] [ExpenseListViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListViewModel.kt)
+- Update `syncExpenses()`: Only set `_syncMessage` on failure.
 
-### [Domain Layer]
+### [Presentation Layer - Screens]
 
-#### [MODIFY] [GoogleDriveRepository.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/repository/GoogleDriveRepository.kt)
-- Add `fun clearCache()`.
+#### [MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)
+- Remove `AlertDialog` logic.
+- Add `SnackbarHost` and `SnackbarHostState` to the `Scaffold`.
+- Add `LaunchedEffect` to trigger `snackbarHostState.showSnackbar()` on errors.
+- Replace the `Refresh` icon/progress indicator with a `LottieAnimation` component when `uiState.isSyncing` is true.
+
+#### [MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)
+- Remove `AlertDialog` logic.
+- Add `SnackbarHost` and `SnackbarHostState`.
+- Add `LaunchedEffect` for error Snackbars.
+- Replace the `Refresh` icon with a `LottieAnimation` component when `uiState.isRefreshing` is true.
 
 ## Verification Plan
 
-### Automated Tests
-- Verify that the project builds.
-- I will check the logs to ensure that after the first sync, subsequent syncs do not call the "list files" or "search folder" endpoints if the IDs are cached.
-
 ### Manual Verification
-1. Perform a sync. Verify in logs that folder/file discovery happens.
-2. Perform another sync. Verify that it uses the cached IDs directly.
-3. Manually delete the file on Google Drive. Perform a sync. Verify that the app handles the 404, clears the cache, and re-creates/re-discovers the file.
+1.  **Trigger Sync**: Tap the sync button.
+2.  **Verify Progress**: Ensure the Lottie animation plays (once the JSON file is provided).
+3.  **Verify Success**: Ensure NO dialog or snackbar appears on success.
+4.  **Verify Error**: Simulate an error and verify the Snackbar appears.
