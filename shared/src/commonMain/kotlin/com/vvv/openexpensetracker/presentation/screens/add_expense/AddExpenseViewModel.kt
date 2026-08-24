@@ -7,7 +7,9 @@ import com.vvv.openexpensetracker.domain.model.Category
 import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetLlmStatusUseCase
 import com.vvv.openexpensetracker.domain.usecase.SaveExpenseUseCase
+import com.vvv.openexpensetracker.domain.util.ReceiptParser
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,12 +28,14 @@ data class AddExpenseUIState(
     val category: String = Category.FOOD,
     val descriptionError: String? = null,
     val amountError: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val isScanEnabled: Boolean = false
 )
 
 class AddExpenseViewModel(
     private val saveExpenseUseCase: SaveExpenseUseCase,
     private val getExpensesUseCase: GetExpensesUseCase,
+    getLlmStatusUseCase: GetLlmStatusUseCase,
     getCurrencyUseCase: GetCurrencyUseCase
 ) : ViewModel() {
 
@@ -40,10 +44,14 @@ class AddExpenseViewModel(
     private val _uiState = MutableStateFlow(AddExpenseUIState(date = getCurrentTimeMillis()))
     val uiState: StateFlow<AddExpenseUIState> = combine(
         _uiState,
-        getCurrencyUseCase.currency
-    ) { state, currency ->
-        state.copy(currency = currency)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value)
+        getCurrencyUseCase.currency,
+        getLlmStatusUseCase.isModelDownloadedFlow()
+    ) { state, currency, isLlmDownloaded ->
+        state.copy(
+            currency = currency,
+            isScanEnabled = isLlmDownloaded
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), _uiState.value.copy(isSaved = false))
 
     private fun getCurrentTimeMillis(): Long {
         return kotlin.time.Clock.System.now().toEpochMilliseconds()
@@ -56,6 +64,7 @@ class AddExpenseViewModel(
             is AddExpenseIntent.AmountChanged -> onAmountChanged(intent.text)
             is AddExpenseIntent.DateChanged -> onDateChanged(intent.timestamp)
             is AddExpenseIntent.CategoryChanged -> onCategoryChanged(intent.category)
+            is AddExpenseIntent.ReceiptScanned -> onReceiptScanned(intent.text)
             AddExpenseIntent.SaveExpense -> saveExpense()
             AddExpenseIntent.ResetSaveState -> _uiState.update { it.copy(isSaved = false) }
         }
@@ -123,6 +132,17 @@ class AddExpenseViewModel(
 
     private fun onCategoryChanged(newCategory: String) {
         _uiState.update { it.copy(category = newCategory) }
+    }
+
+    private fun onReceiptScanned(text: String) {
+        val parsed = ReceiptParser.parse(text)
+        _uiState.update {
+            it.copy(
+                amount = parsed.amount?.toString() ?: it.amount,
+                date = parsed.date ?: it.date,
+                description = parsed.merchant ?: it.description
+            )
+        }
     }
 
     private fun saveExpense() {

@@ -6,6 +6,7 @@ sealed interface AddExpenseIntent {
     data class AmountChanged(val text: String) : AddExpenseIntent
     data class DateChanged(val timestamp: Long) : AddExpenseIntent
     data class CategoryChanged(val category: String) : AddExpenseIntent
+    data class ReceiptScanned(val text: String) : AddExpenseIntent
     data object SaveExpense : AddExpenseIntent
     data object ResetSaveState : AddExpenseIntent
 }

@@ -3,9 +3,12 @@ package com.vvv.openexpensetracker.presentation.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.model.AppCurrency
+import com.vvv.openexpensetracker.domain.usecase.DeleteLlmModelUseCase
+import com.vvv.openexpensetracker.domain.usecase.DownloadLlmModelUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetAuthStateUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetLastSyncTimeUseCase
+import com.vvv.openexpensetracker.domain.usecase.GetLlmStatusUseCase
 import com.vvv.openexpensetracker.domain.usecase.SetCurrencyUseCase
 import com.vvv.openexpensetracker.domain.usecase.SignInUseCase
 import com.vvv.openexpensetracker.domain.usecase.SignOutUseCase
@@ -29,7 +32,10 @@ data class SettingsUIState(
     val userEmail: String? = null,
     val userName: String? = null,
     val currency: AppCurrency = AppCurrency.USD,
-    val lastSyncTime: Long = 0L
+    val lastSyncTime: Long = 0L,
+    val isLlmDownloaded: Boolean = false,
+    val isLlmDownloading: Boolean = false,
+    val llmDownloadProgress: Float = 0f
 )
 
 class SettingsViewModel(
@@ -39,10 +45,16 @@ class SettingsViewModel(
     private val setCurrencyUseCase: SetCurrencyUseCase,
     private val getAuthStateUseCase: GetAuthStateUseCase,
     private val getCurrencyUseCase: GetCurrencyUseCase,
-    private val getLastSyncTimeUseCase: GetLastSyncTimeUseCase
+    private val getLastSyncTimeUseCase: GetLastSyncTimeUseCase,
+    private val getLlmStatusUseCase: GetLlmStatusUseCase,
+    private val downloadLlmModelUseCase: DownloadLlmModelUseCase,
+    private val deleteLlmModelUseCase: DeleteLlmModelUseCase
 ) : ViewModel() {
 
     private val _isSyncing = MutableStateFlow(false)
+    private val _isLlmDownloading = MutableStateFlow(false)
+    private val _llmDownloadProgress = MutableStateFlow(0f)
+
     private val _effect = Channel<SettingsUiEffect>(Channel.BUFFERED)
     val effect = _effect.receiveAsFlow()
 
@@ -54,20 +66,35 @@ class SettingsViewModel(
         ) { token, email, name -> Triple(token, email, name) },
         combine(
             _isSyncing,
-            getCurrencyUseCase.currency
-        ) { syncing, currency -> Pair(syncing, currency) }
-    ) { authInfo, prefInfo ->
+            getCurrencyUseCase.currency,
+            _isLlmDownloading,
+            _llmDownloadProgress
+        ) { syncing, currency, llmDownloading, llmProgress ->
+            FourArgs(syncing, currency, llmDownloading, llmProgress)
+        },
+        getLlmStatusUseCase.isModelDownloadedFlow()
+    ) { authInfo, extraInfo, isLlmDownloaded ->
         val (token, email, name) = authInfo
-        val (syncing, currency) = prefInfo
+        val (syncing, currency, llmDownloading, llmProgress) = extraInfo
         SettingsUIState(
             isSignedIn = token != null,
             isSyncing = syncing,
             userEmail = email,
             userName = name,
             currency = currency,
-            lastSyncTime = getLastSyncTimeUseCase()
+            lastSyncTime = getLastSyncTimeUseCase(),
+            isLlmDownloaded = isLlmDownloaded,
+            isLlmDownloading = llmDownloading,
+            llmDownloadProgress = llmProgress
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUIState())
+
+    private data class FourArgs(
+        val syncing: Boolean,
+        val currency: AppCurrency,
+        val llmDownloading: Boolean,
+        val llmProgress: Float
+    )
 
     fun onIntent(intent: SettingsIntent) {
         when (intent) {
@@ -75,6 +102,8 @@ class SettingsViewModel(
             SettingsIntent.SignOut -> signOut()
             SettingsIntent.SyncNow -> syncNow()
             is SettingsIntent.SetCurrency -> setCurrency(intent.currency)
+            SettingsIntent.DownloadLlmModel -> startLlmDownload()
+            SettingsIntent.DeleteLlmModel -> deleteLlmModel()
         }
     }
 
@@ -96,16 +125,45 @@ class SettingsViewModel(
             return
         }
         viewModelScope.launch {
-            _isSyncing.value = true
+            _isSyncing.emit(true)
             syncExpensesUseCase()
                 .onFailure { error ->
                     _effect.send(SettingsUiEffect.ShowSnackbar("Sync failed: ${error.message}"))
                 }
-            _isSyncing.value = false
+            _isSyncing.emit(false)
         }
     }
 
     private fun setCurrency(newCurrency: AppCurrency) {
         setCurrencyUseCase(newCurrency)
+    }
+
+    private fun startLlmDownload() {
+        if (uiState.value.isLlmDownloaded || _isLlmDownloading.value) return
+
+        viewModelScope.launch {
+            _isLlmDownloading.emit(true)
+            _llmDownloadProgress.emit(0f)
+            try {
+                downloadLlmModelUseCase().collect { progress ->
+                    _llmDownloadProgress.emit(progress)
+                }
+            } catch (e: Exception) {
+                _effect.send(SettingsUiEffect.ShowSnackbar("Download failed: ${e.message}"))
+            } finally {
+                _isLlmDownloading.emit(false)
+            }
+        }
+    }
+
+    private fun deleteLlmModel() {
+        val success = deleteLlmModelUseCase()
+        viewModelScope.launch {
+            if (success) {
+                _effect.send(SettingsUiEffect.ShowSnackbar("Model deleted successfully"))
+            } else {
+                _effect.send(SettingsUiEffect.ShowSnackbar("Failed to delete model"))
+            }
+        }
     }
 }

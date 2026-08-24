@@ -23,7 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +57,7 @@ import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
 import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
 import openexpensetracker.shared.generated.resources.Res
 import openexpensetracker.shared.generated.resources.action_save
+import openexpensetracker.shared.generated.resources.action_scan_receipt
 import openexpensetracker.shared.generated.resources.add_btn_set_today
 import openexpensetracker.shared.generated.resources.add_error_amount
 import openexpensetracker.shared.generated.resources.add_label_amount
@@ -74,7 +76,8 @@ import org.jetbrains.compose.resources.stringResource
 fun AddExpenseScreen(
     viewModel: AddExpenseViewModel,
     expenseId: String?,
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    onNavigateToScan: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
@@ -114,10 +117,20 @@ fun AddExpenseScreen(
             },
             navigationIcon = {
                 IconButton(onClick = navigateBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = stringResource(Res.string.back))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                 }
             },
             actions = {
+                IconButton(
+                    onClick = onNavigateToScan,
+                    enabled = uiState.isScanEnabled
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add, // Placeholder for camera
+                        contentDescription = stringResource(Res.string.action_scan_receipt),
+                        tint = if (uiState.isScanEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                }
                 TextButton(onClick = { viewModel.onIntent(AddExpenseIntent.SaveExpense) }) {
                     Text(
                         text = stringResource(Res.string.action_save),

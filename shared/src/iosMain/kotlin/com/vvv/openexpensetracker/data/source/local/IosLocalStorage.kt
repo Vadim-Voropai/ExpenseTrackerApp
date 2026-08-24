@@ -48,4 +48,13 @@ class IosLocalStorage : LocalStorage {
         val nsString = NSString.create(data = data, encoding = NSUTF8StringEncoding)
         return nsString as String?
     }
+
+    override fun getFilesDir(): String {
+        val fileManager = NSFileManager.defaultManager
+        val urls = fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask)
+        val documentUrl = urls.firstOrNull() as? NSURL
+        return documentUrl?.path ?: ""
+    }
+
+    override val fileSystem: okio.FileSystem = okio.FileSystem.SYSTEM
 }

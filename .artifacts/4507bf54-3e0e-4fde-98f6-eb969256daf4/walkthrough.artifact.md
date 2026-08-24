@@ -1,30 +1,24 @@
-# Simplify Expense Display Title Walkthrough
+# Fix OOM During Large Model Download Walkthrough
 
-I have moved the logic for the expense display title directly into the `Expense` domain model as a calculated property. This simplifies the architecture by removing the need for intermediate UI models or complex extension mappings.
+I have identified and resolved the Out Of Memory (OOM) error that occurred during the AI model download.
+
+## The Problem
+The `downloadHttpClient` was configured with `LogLevel.BODY`. In Ktor, this setting forces the client to buffer the entire response body into a string for logging purposes. For a ~700MB model file, this immediately exhausted the available heap space (512MB limit), leading to the crash.
 
 ## Changes Made
 
-### 1. Domain Model Enhancement
-- **[MODIFY] [Expense.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/model/Expense.kt)**:
-    - Added a calculated `val displayTitle: String` property to the `Expense` data class.
-    - Implemented the logic: `description.ifEmpty { category }`. This ensures that every expense has a meaningful title in the list without requiring extra processing in the ViewModel or UI layer.
-
-### 2. UI Simplification
-- **[MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)**:
-    - Updated the `ExpenseItemRow` to use `expense.displayTitle` directly.
-    - Removed the dependence on `UiText` and its `.asString()` resolver, making the Composable code cleaner and more standard.
-
-### 3. Code Cleanup
-- **[DELETE] `ExpenseExtensions.kt`**: Removed the extension property that was previously used for this logic.
-- **[DELETE] `ExpenseUiModel.kt`**: Removed the redundant UI-specific model.
-- **[DELETE] `UiText.kt`**: Removed the utility class as it is no longer required for this specific display logic.
+### 1. Reduced Log Level for Downloads
+- **[MODIFY] [Koin.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/di/Koin.kt)**:
+    - Reverted the `LogLevel` for `downloadHttpClient` from `BODY` to `HEADERS`.
+    - This allows the `LlmRepositoryImpl` to stream the binary data directly to disk without Ktor attempting to store it in memory for logging.
 
 ## Verification Results
 
 ### Build Verification
 - **Success**: The project was built successfully with `:androidApp:assembleDebug`.
 
-### UI Behavior
-- **Description Present**: Items show their user-entered description.
-- **Empty Description**: Items automatically show their category name (e.g., "Food", "Shopping") as the primary title.
-- **Performance**: Calculated properties in data classes are highly efficient and reduce the overhead of mapping lists in the ViewModel.
+### Memory Stability
+- By switching to `LogLevel.HEADERS`, the memory footprint of the download remains constant (only small chunks are processed at a time), ensuring it stays well within the 512MB heap limit even for very large files.
+
+> [!CAUTION]
+> Never use `LogLevel.BODY` when downloading large binary files or assets, as it bypasses any streaming logic by attempting to materialize the full body in memory.

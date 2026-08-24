@@ -5,4 +5,6 @@ interface LocalStorage {
     fun getString(key: String): String?
     fun saveExpensesFile(content: String)
     fun loadExpensesFile(): String?
+    fun getFilesDir(): String
+    val fileSystem: okio.FileSystem
 }

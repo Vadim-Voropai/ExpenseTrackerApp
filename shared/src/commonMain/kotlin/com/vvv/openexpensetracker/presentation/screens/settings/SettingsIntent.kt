@@ -7,4 +7,6 @@ sealed interface SettingsIntent {
     data object SignOut : SettingsIntent
     data object SyncNow : SettingsIntent
     data class SetCurrency(val currency: AppCurrency) : SettingsIntent
+    data object DownloadLlmModel : SettingsIntent
+    data object DeleteLlmModel : SettingsIntent
 }

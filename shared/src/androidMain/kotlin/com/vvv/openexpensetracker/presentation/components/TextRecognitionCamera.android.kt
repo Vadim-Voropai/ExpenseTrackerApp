@@ -1,0 +1,56 @@
+package com.vvv.openexpensetracker.presentation.components
+
+import android.util.Log
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.mlkit.vision.MlKitAnalyzer
+import androidx.camera.view.LifecycleCameraController
+import androidx.camera.view.PreviewView
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asExecutor
+
+@Composable
+actual fun TextRecognitionCamera(
+    modifier: Modifier,
+    onTextDetected: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val controller = remember { LifecycleCameraController(context) }
+    val textRecognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+
+    val mainExecutor = remember { Dispatchers.Main.asExecutor() }
+
+    controller.setImageAnalysisAnalyzer(
+        mainExecutor,
+        MlKitAnalyzer(
+            listOf(textRecognizer),
+            ImageAnalysis.COORDINATE_SYSTEM_VIEW_REFERENCED,
+            mainExecutor
+        ) { result ->
+            val visionText = result.getValue(textRecognizer)
+            if (visionText != null && visionText.text.isNotEmpty()) {
+                Log.e("TAG", "TextRecognitionCamera: ${visionText.text}")
+                onTextDetected(visionText.text)
+            }
+        }
+    )
+
+    controller.bindToLifecycle(lifecycleOwner)
+
+    AndroidView(
+        factory = { ctx ->
+            PreviewView(ctx).apply {
+                this.controller = controller
+            }
+        },
+        modifier = modifier
+    )
+}

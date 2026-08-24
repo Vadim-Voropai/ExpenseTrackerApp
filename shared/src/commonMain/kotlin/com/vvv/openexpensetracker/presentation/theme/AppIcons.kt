@@ -1,6 +1,7 @@
 package com.vvv.openexpensetracker.presentation.theme
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -33,6 +34,7 @@ object AppIcons {
     val ArrowBack = Icons.Default.ArrowBack
     val Date = Icons.Default.DateRange
     val Done = Icons.Default.Done
+    val Scan = Icons.Default.Add
 }
 
 fun getCategoryIcon(category: String): ImageVector {

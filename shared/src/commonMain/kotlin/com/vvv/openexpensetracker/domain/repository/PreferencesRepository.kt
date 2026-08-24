@@ -6,4 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface PreferencesRepository {
     val currency: StateFlow<AppCurrency>
     fun setCurrency(newCurrency: AppCurrency)
+    
+    val isLlmDownloaded: StateFlow<Boolean>
+    fun setLlmDownloaded(downloaded: Boolean)
 }

@@ -1,5 +1,5 @@
-- [ ] Remove `ExpenseUiModel.kt`
-- [ ] Create `ExpenseExtensions.kt` with `displayTitle` extension
-- [ ] Refactor `ExpenseListViewModel` to use `List<Expense>`
-- [ ] Update `ExpenseListScreen` to use extension property
-- [ ] Verify build and UI behavior
+- [ ] Refactor `LlmRepositoryImpl.kt` for robust hashing and verification
+    - [ ] Add try-catch around hashing logic
+    - [ ] Include actual/expected hashes in exceptions
+    - [ ] Ensure proper stream closure
+- [ ] Verify build and monitor actual calculated hash

@@ -20,7 +20,7 @@ kotlin {
         }
     }
 
-    androidLibrary {
+    android {
         namespace = "com.vvv.openexpensetracker.shared"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -45,6 +45,14 @@ kotlin {
             implementation(libs.androidx.datastore.preferences)
             implementation(libs.androidx.cred.api)
             implementation(libs.androidx.cred.play)
+
+            // CameraX & ML Kit
+            implementation(libs.androidx.camera.core)
+            implementation(libs.androidx.camera.camera2)
+            implementation(libs.androidx.camera.lifecycle)
+            implementation(libs.androidx.camera.view)
+            implementation(libs.androidx.camera.mlkit.vision)
+            implementation(libs.mlkit.text.recognition)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -77,6 +85,7 @@ kotlin {
             implementation(libs.sqldelight.runtime)
             implementation(libs.sqldelight.coroutines)
             implementation(libs.compottie)
+            implementation(libs.llamatik)
         }
     }
 }

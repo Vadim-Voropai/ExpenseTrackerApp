@@ -1,36 +1,24 @@
-# Simplify Expense Display Logic (Remove ExpenseUiModel)
+# Fix Hash Verification and Model Integrity
 
-This plan simplifies the UI logic by removing the `ExpenseUiModel` and instead using an extension property on the domain `Expense` model to calculate the display title. This reduces boilerplate while maintaining a clean separation of concerns.
+This plan addresses the issue where the model download completes but fails the hash verification ("skips equity"). It adds robust logging and error handling to identify the exact cause of the mismatch.
 
 ## Proposed Changes
 
-### [Presentation Layer - Common]
+### [Data Layer - LLM]
 
-#### [MODIFY] [UiText.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/util/UiText.kt)
-- No changes needed, keeping the existing `UiText` utility.
-
-### [Presentation Layer - Expense List]
-
-#### [DELETE] [ExpenseUiModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseUiModel.kt)
-- Remove this file as it's no longer necessary.
-
-#### [NEW] [ExpenseExtensions.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseExtensions.kt)
-- Implement an extension property `val Expense.displayTitle: UiText`.
-- Move the logic: `if (description.isEmpty()) UiText.StringRes(...) else UiText.DynamicString(description)`.
-
-#### [MODIFY] [ExpenseListViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListViewModel.kt)
-- Revert `ExpenseListUIState` to hold `List<Expense>` instead of `ExpenseUiModel`.
-- Remove the mapping logic from the `combine` block.
-
-#### [MODIFY] [ExpenseListScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/expenses/ExpenseListScreen.kt)
-- Revert `ExpenseItemRow` and list items to use `Expense` directly.
-- Call the extension property `expense.displayTitle.asString()`.
+#### [MODIFY] [LlmRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/LlmRepositoryImpl.kt)
+- **Enhanced Verification**:
+    - Wrap the entire download and hashing logic in a `try-catch` block.
+    - Log the calculated hash to the console (or include it in the exception) to help debug if the file is slightly different from expected.
+    - Ensure `HashingSink` is correctly finalized before the value is read.
+- **Improved Streaming**:
+    - Add a check to ensure `calculatedHash` is not empty before verification.
+    - If an error occurs during the stream, ensure the partial file is deleted.
+- **Detailed Error Reporting**: Throw an exception that includes both the expected and actual hash for easier troubleshooting.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `:androidApp:assembleDebug` to ensure compilation is successful.
-
 ### Manual Verification
-- Verify that the expense list still correctly displays the description or the category name fallback.
-- Ensure that clicking/swiping items still works as expected with the simplified model.
+1.  **Monitor Logs**: Run the app and monitor Logcat for "Calculated Hash: [value]".
+2.  **Verify Integrity**: If the hashes still don't match, compare the logged hash with the one on Hugging Face to see if we are downloading a different version (e.g., LFS pointer vs actual file).
+3.  **Success Path**: Verify that upon a successful match, the model correctly initializes and scanning becomes available.

@@ -25,4 +25,10 @@ class AndroidLocalStorage(private val context: Context) : LocalStorage {
         val file = File(context.filesDir, Constants.EXPENSES_FILE_NAME)
         return if (file.exists()) file.readText() else null
     }
+
+    override fun getFilesDir(): String {
+        return context.filesDir.absolutePath
+    }
+
+    override val fileSystem: okio.FileSystem = okio.FileSystem.SYSTEM
 }

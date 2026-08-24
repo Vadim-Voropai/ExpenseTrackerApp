@@ -13,12 +13,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -27,10 +32,12 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,8 +50,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.presentation.screens.expenses.formatDate
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
@@ -59,7 +68,7 @@ import openexpensetracker.shared.generated.resources.*
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -68,6 +77,7 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
+    val scrollState = rememberScrollState()
 
     // Lottie Composition
     val composition by rememberLottieComposition {
@@ -105,198 +115,299 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(dimens.spacingNormal),
-            verticalArrangement = Arrangement.SpaceBetween
+                .verticalScroll(scrollState)
+                .padding(dimens.spacingNormal)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth()
+            // Profile Section
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(dimens.cornerRadiusLarge),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                )
             ) {
-                // Profile Section
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(dimens.cornerRadiusLarge),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(dimens.cornerRadiusExtraLarge),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(dimens.cornerRadiusExtraLarge),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .size(dimens.categoryIconSize - dimens.spacingSmall)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // User Avatar Placeholder / Icon
-                        Box(
-                            modifier = Modifier
-                                .size(dimens.categoryIconSize - dimens.spacingSmall)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AccountBox,
-                                contentDescription = stringResource(Res.string.settings_user_account),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(dimens.iconSizeExtraLarge - dimens.spacingSmall)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(dimens.spacingNormal))
-
-                        if (uiState.isSignedIn) {
-                            Text(
-                                text = uiState.userName ?: stringResource(Res.string.settings_signed_in_user),
-                                style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
-                            Text(
-                                text = uiState.userEmail ?: "",
-                                style = typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            Text(
-                                text = stringResource(Res.string.settings_guest_mode_title),
-                                style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
-                            Text(
-                                text = stringResource(Res.string.settings_guest_mode_subtitle),
-                                style = typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(dimens.spacingLarge))
-
-                // Currency Selector Section
-                Text(
-                    text = stringResource(Res.string.settings_label_currency),
-                    style = typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = dimens.spacingSmall)
-                )
-                var expanded by remember { mutableStateOf(value = false) }
-                val currencies = AppCurrency.entries
-                Box {
-                    OutlinedButton(
-                        onClick = { expanded = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("${uiState.currency.name} (${uiState.currency.symbol})")
-                    }
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        currencies.forEach { cur ->
-                            DropdownMenuItem(
-                                text = { Text("${cur.name} (${cur.symbol})") },
-                                onClick = {
-                                    viewModel.onIntent(SettingsIntent.SetCurrency(cur))
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(dimens.spacingLarge))
-
-                // Action controls
-                Text(
-                    text = stringResource(Res.string.settings_sync_section_title),
-                    style = typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = dimens.spacingExtraSmall, bottom = dimens.spacingSmall)
-                )
-
-                if (uiState.isSignedIn) {
-                    // Sync Now Button
-                    Button(
-                        onClick = { viewModel.onIntent(SettingsIntent.SyncNow) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(dimens.buttonHeight),
-                        shape = RoundedCornerShape(dimens.cornerRadiusLarge),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        enabled = !uiState.isSyncing
-                    ) {
-                        if (uiState.isSyncing) {
-                            Image(
-                                painter = rememberLottiePainter(
-                                    composition = composition,
-                                    progress = { lottieProgress }
-                                ),
-                                contentDescription = stringResource(Res.string.settings_syncing),
-                                modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
-                            )
-                        } else {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(dimens.spacingSmall))
-                            Text(stringResource(Res.string.settings_btn_sync), style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                        }
+                        Icon(
+                            imageVector = Icons.Default.AccountBox,
+                            contentDescription = stringResource(Res.string.settings_user_account),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(dimens.iconSizeExtraLarge - dimens.spacingSmall)
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(dimens.spacingNormal - dimens.spacingExtraSmall))
+                    Spacer(modifier = Modifier.height(dimens.spacingNormal))
 
-                    // Sync log details
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = dimens.spacingExtraSmall),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    if (uiState.isSignedIn) {
                         Text(
-                            text = stringResource(Res.string.settings_label_last_synced),
+                            text = uiState.userName ?: stringResource(Res.string.settings_signed_in_user),
+                            style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
+                        Text(
+                            text = uiState.userEmail ?: "",
+                            style = typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(Res.string.settings_guest_mode_title),
+                            style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
+                        Text(
+                            text = stringResource(Res.string.settings_guest_mode_subtitle),
                             style = typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
-                        Text(
-                            text = formatLastSyncTime(uiState.lastSyncTime),
-                            style = typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(dimens.spacingLarge))
-
-                    // Sign Out Button
-                    OutlinedButton(
-                        onClick = { viewModel.onIntent(SettingsIntent.SignOut) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(dimens.buttonHeight),
-                        shape = RoundedCornerShape(dimens.cornerRadiusLarge),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
-                            brush = androidx.compose.ui.graphics.SolidColor(
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
-                            )
-                        )
-                    ) {
-                        Text(stringResource(Res.string.settings_btn_sign_out), style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                    }
-                } else {
-                    // Sign In Button
-                    Button(
-                        onClick = { viewModel.onIntent(SettingsIntent.SignIn) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(dimens.buttonHeight),
-                        shape = RoundedCornerShape(dimens.cornerRadiusLarge),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text(stringResource(Res.string.settings_btn_sign_in), style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(dimens.spacingLarge))
+
+            // AI Features Section
+            Text(
+                text = "AI Features",
+                style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = dimens.spacingSmall)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(dimens.cornerRadiusLarge),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(dimens.spacingNormal)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Receipt Scanner", style = typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                "Enables on-device text recognition and parsing.",
+                                style = typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (uiState.isLlmDownloaded) {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color(0xFF4CAF50),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("TinyLlama 1.1B", style = typography.bodyMedium, color = Color(0xFF4CAF50))
+                                }
+                                TextButton(
+                                    onClick = { viewModel.onIntent(SettingsIntent.DeleteLlmModel) },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Delete")
+                                }
+                            }
+                        }
+                    } else if (uiState.isLlmDownloading) {
+                        Column {
+                            LinearProgressIndicator(
+                                progress = { uiState.llmDownloadProgress },
+                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Downloading model: ${(uiState.llmDownloadProgress * 100).toInt()}%",
+                                style = typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.onIntent(SettingsIntent.DownloadLlmModel) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(dimens.cornerRadiusNormal)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Enable Receipt Scanner (~600MB)")
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(dimens.spacingLarge))
+
+            // Currency Selector Section
+            Text(
+                text = stringResource(Res.string.settings_label_currency),
+                style = typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = dimens.spacingSmall)
+            )
+            var expanded by remember { mutableStateOf(value = false) }
+            val currencies = AppCurrency.entries
+            Box {
+                OutlinedButton(
+                    onClick = { expanded = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("${uiState.currency.name} (${uiState.currency.symbol})")
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    currencies.forEach { cur ->
+                        DropdownMenuItem(
+                            text = { Text("${cur.name} (${cur.symbol})") },
+                            onClick = {
+                                viewModel.onIntent(SettingsIntent.SetCurrency(cur))
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(dimens.spacingLarge))
+
+            // Action controls
+            Text(
+                text = stringResource(Res.string.settings_syncing),
+                style = typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = dimens.spacingExtraSmall, bottom = dimens.spacingSmall)
+            )
+
+            if (uiState.isSignedIn) {
+                // Sync Now Button
+                Button(
+                    onClick = { viewModel.onIntent(SettingsIntent.SyncNow) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(dimens.buttonHeight),
+                    shape = RoundedCornerShape(dimens.cornerRadiusLarge),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    enabled = !uiState.isSyncing
+                ) {
+                    if (uiState.isSyncing) {
+                        Image(
+                            painter = rememberLottiePainter(
+                                composition = composition,
+                                progress = { lottieProgress }
+                            ),
+                            contentDescription = stringResource(Res.string.settings_syncing),
+                            modifier = Modifier.size(dimens.iconSizeNormal * 1.5f)
+                        )
+                    } else {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(dimens.spacingSmall))
+                        Text(
+                            stringResource(Res.string.settings_btn_sync),
+                            style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(dimens.spacingNormal - dimens.spacingExtraSmall))
+
+                // Sync log details
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = dimens.spacingExtraSmall),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(Res.string.settings_label_last_synced),
+                        style = typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = formatLastSyncTime(uiState.lastSyncTime),
+                        style = typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(dimens.spacingLarge))
+
+                // Sign Out Button
+                OutlinedButton(
+                    onClick = { viewModel.onIntent(SettingsIntent.SignOut) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(dimens.buttonHeight),
+                    shape = RoundedCornerShape(dimens.cornerRadiusLarge),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(
+                            MaterialTheme.colorScheme.error.copy(alpha = 0.5f)
+                        )
+                    )
+                ) {
+                    Text(
+                        stringResource(Res.string.settings_btn_sign_out),
+                        style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            } else {
+                // Sign In Button
+                Button(
+                    onClick = { viewModel.onIntent(SettingsIntent.SignIn) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(dimens.buttonHeight),
+                    shape = RoundedCornerShape(dimens.cornerRadiusLarge),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(
+                        stringResource(Res.string.settings_btn_sign_in),
+                        style = typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(dimens.spacingLarge))
 
             // About footer
             Column(
