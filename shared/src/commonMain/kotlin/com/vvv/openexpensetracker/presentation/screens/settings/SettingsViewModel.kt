@@ -23,6 +23,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 sealed interface SettingsUiEffect {
     data class ShowSnackbar(val message: String) : SettingsUiEffect
@@ -38,7 +41,9 @@ data class SettingsUIState(
     val isLlmDownloaded: Boolean = false,
     val isLlmDownloading: Boolean = false,
     val llmDownloadProgress: Float = 0f,
-    val benchmarkResult: LlmBenchmarkResult? = null
+    val benchmarkResult: LlmBenchmarkResult? = null,
+    val formattedTps: String = "-",
+    val formattedScanTime: String = "-"
 )
 
 class SettingsViewModel(
@@ -98,6 +103,8 @@ class SettingsViewModel(
             isLlmDownloading = llmDownloading,
             llmDownloadProgress = llmProgress,
             benchmarkResult = benchmarkResult,
+            formattedTps = benchmarkResult?.let { formatDecimal(it.tps) } ?: "-",
+            formattedScanTime = benchmarkResult?.let { formatDecimal(it.durationMs / 1000.0) } ?: "-"
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUIState())
 
@@ -177,6 +184,46 @@ class SettingsViewModel(
             } else {
                 _effect.send(SettingsUiEffect.ShowSnackbar("Failed to delete model"))
             }
+        }
+    }
+
+    fun formatDecimal(value: Double): String {
+        val integerPart = value.toInt()
+        val fractionalPart = ((value - integerPart) * 100).toInt()
+        return "$integerPart.${fractionalPart.toString().padStart(2, '0')}"
+    }
+
+    fun formatLastSyncTime(timestamp: Long, neverStr: String, atStr: String, formatDate: (Long) -> String): String {
+        if (timestamp == 0L) return neverStr
+
+        val datePart = formatDate(timestamp)
+        val timePart = try {
+            val instant = Instant.fromEpochMilliseconds(timestamp)
+            val tz = TimeZone.currentSystemDefault()
+            val localDateTime = instant.toLocalDateTime(tz)
+            "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
+        } catch (_: Exception) {
+            ""
+        }
+
+        return if (timePart.isNotEmpty()) {
+            "$datePart $atStr $timePart"
+        } else {
+            datePart
+        }
+    }
+
+    fun formatDate(timestamp: Long): String {
+        return try {
+            val instant = Instant.fromEpochMilliseconds(timestamp)
+            val tz = TimeZone.currentSystemDefault()
+            val dateTime = instant.toLocalDateTime(tz)
+
+            val month = dateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+            val day = dateTime.day.toString().padStart(2, '0')
+            "$month $day, ${dateTime.year}"
+        } catch (_: Exception) {
+            "Unknown Date"
         }
     }
 }

@@ -44,6 +44,15 @@ class StatsViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatsUIState())
 
+    fun formatAmount(amount: Double): String {
+        val cents = ((amount - amount.toInt()) * 100).toInt()
+        return if (cents == 0) {
+            amount.toInt().toString()
+        } else {
+            "${amount.toInt()}.${cents.toString().padStart(2, '0')}"
+        }
+    }
+
     private fun formatMonthYear(timestamp: Long): String {
         val instant = Instant.fromEpochMilliseconds(timestamp)
         val tz = TimeZone.currentSystemDefault()

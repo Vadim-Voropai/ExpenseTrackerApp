@@ -1,5 +1,2 @@
-- [ ] Remove `runBenchmark` from `LlmRepository`
-- [ ] Delete `RunLlmBenchmarkUseCase`
-- [ ] Update `LlmRepositoryImpl.kt` to calculate performance during extraction
-- [ ] Update Settings MVI components (remove benchmark button/logic)
-- [ ] Verify build and automatic benchmarking during scan
+- [x] Update `strings.xml` to use positional placeholders (`%1$s`, `%1$d`)
+- [x] Verify fix in `SettingsScreen.kt`

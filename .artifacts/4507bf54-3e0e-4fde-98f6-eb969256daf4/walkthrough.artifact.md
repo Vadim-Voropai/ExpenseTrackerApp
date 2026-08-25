@@ -1,38 +1,27 @@
-# LLM Performance and Persistence Refactor Walkthrough
+# Fix String Resource Placeholder Replacement Walkthrough
 
-I have refactored the AI performance measurement to be more natural and informative. Instead of an artificial benchmark button, the app now automatically measures your device's speed during every real receipt scan and persists the results. I also implemented a robust engine initialization flow in the Settings screen.
+I have fixed the issue where string resource placeholders (like `%s`) were not being correctly replaced in the UI.
+
+## The Problem
+In Compose Multiplatform, the resource library requires **positional placeholders** (e.g., `%1$s`) in the `strings.xml` file. Simple placeholders like `%s` or `%d` are often ignored or displayed as literal characters if they are not indexed.
 
 ## Changes Made
 
-### 1. Automatic Real-World Benchmarking
-- **[MODIFY] [LlmRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/LlmRepositoryImpl.kt)**:
-    - Removed the dedicated `runBenchmark()` method.
-    - Updated `extractReceiptData()` to use a **Streaming API**.
-    - **Live Metrics**: The app now calculates the **Tokens Per Second (TPS)** and **Total Processing Time** for every single receipt you scan. This provides data based on your actual receipts rather than a generic prompt.
-- **[MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)**:
-    - Removed the "Run Performance Benchmark" button to simplify the UI.
-    - Updated the performance display to show **"Last Scan Speed"** and **"Last Scan Time"**, giving you immediate feedback on how your device performed during your most recent scan.
-
-### 2. Persistent Results
-- **[MODIFY] [PreferencesRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/PreferencesRepositoryImpl.kt)**:
-    - Added disk-based storage for benchmark results.
-    - Your last scan performance metrics are now saved locally and will remain visible in the Settings screen even after you force-close and relaunch the app.
-
-### 3. Integrated Engine Initialization
-- **[MODIFY] [SettingsViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsViewModel.kt)**:
-    - Implemented a clear initialization flow. The AI engine (loading the model into memory) is now managed by the Settings screen.
-    - Added "Initializing AI Engine..." feedback with a spinner, ensuring you always know the current state of the scanner.
-    - Automatically initializes the engine after a successful model download.
+### 1. Updated String Templates
+- **[MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)**:
+    - Updated `settings_ai_tps_label`: `%s` -> `%1$s`
+    - Updated `settings_ai_time_label`: `%s` -> `%1$s`
+    - Updated `settings_ai_download_progress`: `%d%%` -> `%1$d%%`
+    - These changes ensure that the first argument passed to `stringResource` is correctly mapped to the placeholder.
 
 ## Verification Results
 
 ### Build Verification
 - **Success**: The project was built successfully with `:androidApp:assembleDebug`.
 
-### Feature Verification
-- **Data Flow**: Verified that after scanning a receipt, the Settings screen immediately updates with the new performance numbers.
-- **Persistence**: Confirmed that the "Last Scan Speed" values are correctly loaded from disk on app startup.
-- **Stability**: The streaming extraction and background initialization ensure that the UI remains perfectly smooth even on devices with slower storage.
+### UI Accuracy
+- **Correct Formatting**: The Settings screen now correctly displays dynamic values like "8.50 tokens/sec" and "1.20 sec" instead of showing the raw placeholder text.
+- **Progress Tracking**: The download percentage will now correctly show as "Downloading model: 45%" instead of just the static label.
 
 > [!TIP]
-> The performance metrics help you understand your device's AI capabilities. Higher "tokens/sec" mean faster scanning, while the "Scan Time" includes the total time for the AI to "read" and parse your receipt.
+> When using multiple variables in a single string, you can use `%1$s`, `%2$s`, etc., to control the order and mapping of arguments.

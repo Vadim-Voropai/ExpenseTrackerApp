@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +28,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,21 +50,42 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.vvv.openexpensetracker.domain.model.AppCurrency
-import com.vvv.openexpensetracker.presentation.screens.expenses.formatDate
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
+import com.vvv.openexpensetracker.presentation.theme.ColorSuccess
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import openexpensetracker.shared.generated.resources.*
+import openexpensetracker.shared.generated.resources.Res
+import openexpensetracker.shared.generated.resources.at
+import openexpensetracker.shared.generated.resources.llm_model_name
+import openexpensetracker.shared.generated.resources.never
+import openexpensetracker.shared.generated.resources.settings_ai_btn_delete
+import openexpensetracker.shared.generated.resources.settings_ai_btn_enable
+import openexpensetracker.shared.generated.resources.settings_ai_download_progress
+import openexpensetracker.shared.generated.resources.settings_ai_performance_title
+import openexpensetracker.shared.generated.resources.settings_ai_ready
+import openexpensetracker.shared.generated.resources.settings_ai_scanner_desc
+import openexpensetracker.shared.generated.resources.settings_ai_scanner_title
+import openexpensetracker.shared.generated.resources.settings_ai_section_title
+import openexpensetracker.shared.generated.resources.settings_ai_time_label
+import openexpensetracker.shared.generated.resources.settings_ai_tps_label
+import openexpensetracker.shared.generated.resources.settings_btn_sign_in
+import openexpensetracker.shared.generated.resources.settings_btn_sign_out
+import openexpensetracker.shared.generated.resources.settings_btn_sync
+import openexpensetracker.shared.generated.resources.settings_guest_mode_subtitle
+import openexpensetracker.shared.generated.resources.settings_guest_mode_title
+import openexpensetracker.shared.generated.resources.settings_label_currency
+import openexpensetracker.shared.generated.resources.settings_label_last_synced
+import openexpensetracker.shared.generated.resources.settings_signed_in_user
+import openexpensetracker.shared.generated.resources.settings_syncing
+import openexpensetracker.shared.generated.resources.settings_title
+import openexpensetracker.shared.generated.resources.settings_user_account
+import openexpensetracker.shared.generated.resources.settings_version_info
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,7 +202,7 @@ fun SettingsScreen(
 
             // AI Features Section
             Text(
-                text = "AI Features",
+                text = stringResource(Res.string.settings_ai_section_title),
                 style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(bottom = dimens.spacingSmall)
@@ -201,20 +220,23 @@ fun SettingsScreen(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(dimens.iconSizeNormal)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(dimens.spacingSmallIntermediate))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Receipt Scanner", style = typography.titleSmall.copy(fontWeight = FontWeight.Bold))
                             Text(
-                                "Enables on-device text recognition and parsing.",
+                                text = stringResource(Res.string.settings_ai_scanner_title),
+                                style = typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = stringResource(Res.string.settings_ai_scanner_desc),
                                 style = typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(dimens.spacingNormal))
 
                     if (uiState.isLlmDownloaded) {
                         Column {
@@ -227,12 +249,22 @@ fun SettingsScreen(
                                     Icon(
                                         Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = Color(0xFF4CAF50),
-                                        modifier = Modifier.size(16.dp)
+                                        tint = ColorSuccess,
+                                        modifier = Modifier.size(dimens.progressIndicatorSizeNormal)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("TinyLlama 1.1B", style = typography.bodyMedium, color = Color(0xFF4CAF50))
+                                    Spacer(modifier = Modifier.width(dimens.spacingSmall))
+                                    Text(
+                                        text = stringResource(Res.string.settings_ai_ready),
+                                        style = typography.bodyMedium,
+                                        color = ColorSuccess
+                                    )
                                 }
+                                Text(
+                                    text = stringResource(Res.string.llm_model_name),
+                                    style = typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = dimens.spacingSmall)
+                                )
                                 TextButton(
                                     onClick = { viewModel.onIntent(SettingsIntent.DeleteLlmModel) },
                                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
@@ -240,39 +272,51 @@ fun SettingsScreen(
                                     Icon(
                                         Icons.Default.Delete,
                                         contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(dimens.iconSizeStatus)
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Delete")
+                                    Spacer(modifier = Modifier.width(dimens.spacingExtraSmall))
+                                    Text(stringResource(Res.string.settings_ai_btn_delete))
                                 }
                             }
 
                             // Performance Metrics
-                            uiState.benchmarkResult?.let { result ->
-                                Text("Performance", style = typography.labelMedium.copy(fontWeight = FontWeight.Bold))
-                                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                                    Text(
-                                        text = "Token generation Speed: ${formatDecimal(result.tps)} tokens/sec",
-                                        style = typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Average Scan Time: ${formatDecimal(result.durationMs / 1000.0)} sec",
-                                        style = typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
+                            Spacer(modifier = Modifier.height(dimens.spacingSmall))
+                            Text(
+                                text = stringResource(Res.string.settings_ai_performance_title),
+                                style = typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Column(modifier = Modifier.padding(vertical = dimens.spacingExtraSmall)) {
+                                Text(
+                                    text = stringResource(
+                                        Res.string.settings_ai_tps_label,
+                                        uiState.formattedTps
+                                    ),
+                                    style = typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(
+                                        Res.string.settings_ai_time_label,
+                                        uiState.formattedScanTime
+                                    ),
+                                    style = typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
                         }
                     } else if (uiState.isLlmDownloading) {
                         Column {
                             LinearProgressIndicator(
                                 progress = { uiState.llmDownloadProgress },
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                modifier = Modifier.fillMaxWidth().height(dimens.progressBarHeight)
+                                    .clip(RoundedCornerShape(dimens.spacingExtraSmall)),
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(dimens.spacingSmall))
                             Text(
-                                "Downloading model: ${(uiState.llmDownloadProgress * 100).toInt()}%",
+                                text = stringResource(
+                                    Res.string.settings_ai_download_progress,
+                                    (uiState.llmDownloadProgress * 100).toInt()
+                                ),
                                 style = typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -283,9 +327,13 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(dimens.cornerRadiusNormal)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Enable Receipt Scanner (~600MB)")
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(dimens.iconSizeStatus)
+                            )
+                            Spacer(modifier = Modifier.width(dimens.spacingSmall))
+                            Text(stringResource(Res.string.settings_ai_btn_enable))
                         }
                     }
                 }
@@ -381,7 +429,12 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = formatLastSyncTime(uiState.lastSyncTime),
+                        text = viewModel.formatLastSyncTime(
+                            uiState.lastSyncTime,
+                            stringResource(Res.string.never),
+                            stringResource(Res.string.at),
+                            viewModel::formatDate
+                        ),
                         style = typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -453,32 +506,5 @@ fun SettingsScreen(
                 }
             }
         }
-    }
-}
-
-private fun formatDecimal(value: Double): String {
-    val integerPart = value.toInt()
-    val fractionalPart = ((value - integerPart) * 100).toInt()
-    return "$integerPart.${fractionalPart.toString().padStart(2, '0')}"
-}
-
-@Composable
-fun formatLastSyncTime(timestamp: Long): String {
-    if (timestamp == 0L) return stringResource(Res.string.never)
-    
-    val datePart = formatDate(timestamp)
-    val timePart = try {
-        val instant = kotlin.time.Instant.fromEpochMilliseconds(timestamp)
-        val tz = TimeZone.currentSystemDefault()
-        val localDateTime = instant.toLocalDateTime(tz)
-        "${localDateTime.hour.toString().padStart(2, '0')}:${localDateTime.minute.toString().padStart(2, '0')}"
-    } catch (_: Exception) {
-        ""
-    }
-    
-    return if (timePart.isNotEmpty()) {
-        "$datePart ${stringResource(Res.string.at)} $timePart"
-    } else {
-        datePart
     }
 }

@@ -48,9 +48,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import com.vvv.openexpensetracker.domain.model.Category
-import com.vvv.openexpensetracker.presentation.screens.expenses.formatDate
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
@@ -227,7 +225,7 @@ fun AddExpenseScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = formatDate(uiState.date),
+                            text = viewModel.formatDate(uiState.date),
                             style = typography.titleMedium
                         )
                     }
@@ -300,7 +298,7 @@ fun AddExpenseScreen(
                                 Text(
                                     text = stringResource(nameRes),
                                     style = typography.labelMedium,
-                                    textAlign = TextAlign.Center
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                 )
                             }
                         }

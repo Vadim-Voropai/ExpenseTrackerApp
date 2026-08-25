@@ -33,13 +33,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.vvv.openexpensetracker.domain.util.ParsedReceipt
 import com.vvv.openexpensetracker.presentation.components.CameraPermissionHandler
 import com.vvv.openexpensetracker.presentation.components.TextRecognitionCamera
+import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import kotlinx.coroutines.flow.collectLatest
 import openexpensetracker.shared.generated.resources.Res
 import openexpensetracker.shared.generated.resources.back
+import openexpensetracker.shared.generated.resources.scan_analyzing
+import openexpensetracker.shared.generated.resources.scan_guidance
+import openexpensetracker.shared.generated.resources.scan_initializing
+import openexpensetracker.shared.generated.resources.scan_label_amount
+import openexpensetracker.shared.generated.resources.scan_label_date
+import openexpensetracker.shared.generated.resources.scan_title
+import openexpensetracker.shared.generated.resources.scan_waiting_permission
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,6 +58,7 @@ fun ScanReceiptScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var isPermissionGranted by remember { mutableStateOf(false) }
+    val dimens = AppTheme.dimens
 
     LaunchedEffect(viewModel) {
         viewModel.effect.collectLatest { effect ->
@@ -74,7 +82,7 @@ fun ScanReceiptScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Scan Receipt") },
+                title = { Text(stringResource(Res.string.scan_title)) },
                 navigationIcon = {
                     IconButton(onClick = navigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
@@ -97,8 +105,8 @@ fun ScanReceiptScreen(
                 Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = Color.White)
-                        Spacer(modifier = Modifier.padding(8.dp))
-                        Text("Initializing AI Engine...", color = Color.White)
+                        Spacer(modifier = Modifier.padding(dimens.spacingSmall))
+                        Text(stringResource(Res.string.scan_initializing), color = Color.White)
                     }
                 }
             } else if (isPermissionGranted) {
@@ -117,26 +125,40 @@ fun ScanReceiptScreen(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(16.dp),
+                        .padding(dimens.spacingNormal),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (uiState.isProcessing) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("AI is analyzing...", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(dimens.progressIndicatorSizeNormal),
+                                strokeWidth = dimens.strokeWidthSmall,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(dimens.spacingSmall))
+                            Text(
+                                text = stringResource(Res.string.scan_analyzing),
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            DetectionStatusItem(label = "Amount", isFound = uiState.amountFound)
-                            Spacer(modifier = Modifier.width(24.dp))
-                            DetectionStatusItem(label = "Date", isFound = uiState.dateFound)
+                            DetectionStatusItem(
+                                label = stringResource(Res.string.scan_label_amount),
+                                isFound = uiState.amountFound
+                            )
+                            Spacer(modifier = Modifier.width(dimens.spacingLarge))
+                            DetectionStatusItem(
+                                label = stringResource(Res.string.scan_label_date),
+                                isFound = uiState.dateFound
+                            )
                         }
                         Text(
-                            text = "Align receipt to capture all details",
+                            text = stringResource(Res.string.scan_guidance),
                             color = Color.White.copy(alpha = 0.8f),
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = dimens.spacingSmall)
                         )
                     }
                 }
@@ -145,7 +167,7 @@ fun ScanReceiptScreen(
                     modifier = Modifier.fillMaxSize().background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Waiting for camera permission...", color = Color.White)
+                    Text(stringResource(Res.string.scan_waiting_permission), color = Color.White)
                 }
             }
         }
@@ -154,14 +176,15 @@ fun ScanReceiptScreen(
 
 @Composable
 private fun DetectionStatusItem(label: String, isFound: Boolean) {
+    val dimens = AppTheme.dimens
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             tint = if (isFound) Color.Green else Color.White.copy(alpha = 0.3f),
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(dimens.iconSizeStatus)
         )
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(dimens.spacingSmall))
         Text(
             text = label,
             color = if (isFound) Color.Green else Color.White,

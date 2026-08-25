@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.dp
 data class AppDimens(
     val spacingExtraSmall: Dp = 4.dp,
     val spacingSmall: Dp = 8.dp,
+    val spacingSmallIntermediate: Dp = 12.dp,
     val spacingNormal: Dp = 16.dp,
     val spacingLarge: Dp = 24.dp,
     val spacingExtraLarge: Dp = 32.dp,
@@ -17,6 +18,7 @@ data class AppDimens(
     val cornerRadiusExtraLarge: Dp = 20.dp,
     
     val iconSizeSmall: Dp = 16.dp,
+    val iconSizeStatus: Dp = 18.dp,
     val iconSizeNormal: Dp = 24.dp,
     val iconSizeLarge: Dp = 36.dp,
     val iconSizeExtraLarge: Dp = 48.dp,
@@ -28,6 +30,13 @@ data class AppDimens(
     val strokeWidthSmall: Dp = 2.dp,
     
     val buttonHeight: Dp = 56.dp,
+    val benchmarkButtonHeight: Dp = 36.dp,
+    val initButtonHeight: Dp = 32.dp,
+    
+    val progressBarHeight: Dp = 8.dp,
+    val progressIndicatorSizeSmall: Dp = 14.dp,
+    val progressIndicatorSizeNormal: Dp = 16.dp,
+    
     val cardPadding: Dp = 16.dp,
     val chartSize: Dp = 240.dp
 )

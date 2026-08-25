@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 data class AddExpenseUIState(
     val currency: AppCurrency = AppCurrency.USD,
@@ -219,6 +222,20 @@ class AddExpenseViewModel(
             )
             saveExpenseUseCase(expense)
             _uiState.update { it.copy(isSaved = true) }
+        }
+    }
+
+    fun formatDate(timestamp: Long): String {
+        return try {
+            val instant = Instant.fromEpochMilliseconds(timestamp)
+            val tz = TimeZone.currentSystemDefault()
+            val dateTime = instant.toLocalDateTime(tz)
+
+            val month = dateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+            val day = dateTime.day.toString().padStart(2, '0')
+            "$month $day, ${dateTime.year}"
+        } catch (_: Exception) {
+            "Unknown Date"
         }
     }
 

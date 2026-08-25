@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import com.vvv.openexpensetracker.presentation.screens.expenses.formatAmount
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
@@ -105,7 +104,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                         )
                         Spacer(modifier = Modifier.height(dimens.spacingExtraSmall))
                         Text(
-                            text = "${uiState.currency.symbol}${formatAmount(uiState.totalSpent)}",
+                            text = "${uiState.currency.symbol}${viewModel.formatAmount(uiState.totalSpent)}",
                             style = typography.headlineMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -134,7 +133,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
                             category = entry.key,
                             amount = entry.value,
                             percentage = (entry.value / uiState.totalSpent) * 100,
-                            currencySymbol = uiState.currency.symbol
+                            currencySymbol = uiState.currency.symbol,
+                            formatAmount = viewModel::formatAmount
                         )
                     }
                 }
@@ -181,7 +181,8 @@ fun CategoryBreakdownRow(
     category: String,
     amount: Double,
     percentage: Double,
-    currencySymbol: String
+    currencySymbol: String,
+    formatAmount: (Double) -> String
 ) {
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography

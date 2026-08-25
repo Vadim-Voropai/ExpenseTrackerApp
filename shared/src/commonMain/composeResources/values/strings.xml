@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Open Expense Tracker</string>
     <string name="back">Back</string>
+    <string name="placeholder_dash">-</string>
     <string name="action_save">Save</string>
     <string name="never">Never</string>
     <string name="at">at</string>
@@ -26,6 +27,15 @@
     <string name="expense_deleted">Expense deleted</string>
     <string name="action_undo">Undo</string>
 
+    <!-- Scan Receipt -->
+    <string name="scan_title">Scan Receipt</string>
+    <string name="scan_initializing">Initializing AI Engine...</string>
+    <string name="scan_analyzing">AI is analyzing...</string>
+    <string name="scan_guidance">Align receipt to capture all details</string>
+    <string name="scan_waiting_permission">Waiting for camera permission...</string>
+    <string name="scan_label_amount">Amount</string>
+    <string name="scan_label_date">Date</string>
+
     <!-- Add/Edit Expense -->
     <string name="add_title">Add Expense</string>
     <string name="edit_title">Edit Expense</string>
@@ -43,6 +53,17 @@
     <string name="settings_title">Settings</string>
     <string name="settings_user_account">User Account</string>
     <string name="settings_signed_in_user">Signed In User</string>
+    <string name="settings_ai_section_title">AI Features</string>
+    <string name="settings_ai_scanner_title">Receipt Scanner</string>
+    <string name="settings_ai_scanner_desc">Enables on-device text recognition and parsing.</string>
+    <string name="llm_model_name">TinyLlama 1.1B</string>
+    <string name="settings_ai_ready">Scanner Ready</string>
+    <string name="settings_ai_performance_title">Performance</string>
+    <string name="settings_ai_tps_label">Token generation Speed: %1$s tokens/sec</string>
+    <string name="settings_ai_time_label">Average Scan Time: %1$s sec</string>
+    <string name="settings_ai_download_progress">Downloading model: %1$d%%</string>
+    <string name="settings_ai_btn_delete">Delete</string>
+    <string name="settings_ai_btn_enable">Enable Receipt Scanner (~600MB)</string>
     <string name="settings_guest_mode_title">Guest Mode</string>
     <string name="settings_guest_mode_subtitle">Sign in to backup your expenses to Google Drive.</string>
     <string name="settings_label_currency">Preferred Currency</string>

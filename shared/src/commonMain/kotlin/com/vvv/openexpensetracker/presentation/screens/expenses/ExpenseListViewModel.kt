@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 sealed interface ExpenseListUiEffect {
     data class ShowUndoSnackbar(val expenseId: String) : ExpenseListUiEffect
@@ -111,6 +114,29 @@ class ExpenseListViewModel(
                     _effect.send(ExpenseListUiEffect.ShowError("Sync failed: ${error.message}"))
                 }
             _isRefreshing.value = false
+        }
+    }
+
+    fun formatDate(timestamp: Long): String {
+        return try {
+            val instant = Instant.fromEpochMilliseconds(timestamp)
+            val tz = TimeZone.currentSystemDefault()
+            val dateTime = instant.toLocalDateTime(tz)
+
+            val month = dateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
+            val day = dateTime.day.toString().padStart(2, '0')
+            "$month $day, ${dateTime.year}"
+        } catch (_: Exception) {
+            "Unknown Date"
+        }
+    }
+
+    fun formatAmount(amount: Double): String {
+        val cents = ((amount - amount.toInt()) * 100).toInt()
+        return if (cents == 0) {
+            amount.toInt().toString()
+        } else {
+            "${amount.toInt()}.${cents.toString().padStart(2, '0')}"
         }
     }
 }

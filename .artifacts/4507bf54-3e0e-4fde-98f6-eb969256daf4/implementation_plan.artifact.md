@@ -1,54 +1,27 @@
-# Move Performance Calculation to Receipt Extraction
+# Fix String Resource Placeholder Replacement
 
-This plan refactors the LLM performance measurement to happen automatically during receipt extraction. This removes the need for a separate manual benchmark and provides real-world performance data to the user.
+This plan fixes the issue where `%s` and `%d` placeholders in `strings.xml` are not being correctly replaced by values in Compose Multiplatform. We will update the placeholders to use the required positional format (e.g., `%1$s`).
 
 ## Proposed Changes
 
-### [Domain Layer]
+### [Resources]
 
-#### [MODIFY] [LlmRepository.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/repository/LlmRepository.kt)
-- Remove `suspend fun runBenchmark(): LlmBenchmarkResult`.
+#### [MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)
+Update all string templates to use positional placeholders:
+- `settings_ai_tps_label`: change `%s` to `%1$s`.
+- `settings_ai_time_label`: change `%s` to `%1$s`.
+- `settings_ai_download_progress`: change `%d%%` to `%1$d%%`.
 
-#### [DELETE] [RunLlmBenchmarkUseCase](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/domain/usecase/LlmUseCases.kt)
-- Remove `RunLlmBenchmarkUseCase` and its `initialize` method. Initialization will be handled by `AnalyzeReceiptLlmUseCase`.
-
-### [Data Layer]
-
-#### [MODIFY] [LlmRepositoryImpl.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/data/repository/LlmRepositoryImpl.kt)
-- **Remove `runBenchmark()`**: Delete the dedicated benchmarking method.
-- **Update `extractReceiptData()`**:
-    - Switch implementation from `LlamaBridge.generate()` to **`LlamaBridge.generateStream()`**.
-    - Capture the **start time** (when prompt is sent).
-    - Capture the **first token time** (when decoding starts).
-    - Capture the **end time** (when generation completes).
-    - Count the total number of tokens (deltas) generated.
-    - Calculate **TPS** (Tokens Per Second) and **Total Duration**.
-    - Automatically call `preferencesRepository.setLlmBenchmarkResult()` with the results of every successful scan.
-
-### [Presentation Layer]
-
-#### [MODIFY] [SettingsIntent.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsIntent.kt)
-- Remove `RunBenchmark`.
-
-#### [MODIFY] [SettingsViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsViewModel.kt)
-- Remove benchmark-related states and logic (`isBenchmarking`, `runBenchmark()`, etc.).
-- Update `startLlmDownload()` to only initialize the engine after download, without triggering a manual benchmark.
+### [Presentation Layer - Settings]
 
 #### [MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)
-- Update the "Performance" section:
-    - Remove the "Run Performance Benchmark" button.
-    - Rename labels to "Last Scan Speed" and "Last Scan Time".
-    - Show the results only if a scan has been performed (stored in preferences).
-
-### [Dependency Injection]
-
-#### [MODIFY] [Koin.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/di/Koin.kt)
-- Remove `RunLlmBenchmarkUseCase` registration.
+- Ensure that `stringResource` is called with the arguments correctly after the XML change.
 
 ## Verification Plan
 
+### Automated Tests
+- Run `:androidApp:assembleDebug` to ensure resources are correctly generated.
+
 ### Manual Verification
-1.  **Benchmarking**: Scan a receipt in the Add Expense screen.
-2.  **Verify Results**: Go to Settings and verify that the "Last Scan Speed" and "Last Scan Time" have been updated with the metrics from that specific scan.
-3.  **Persistence**: Relaunch the app and verify the metrics from the last scan are still visible.
-4.  **UI Cleanup**: Verify that the "Run Benchmark" button is no longer present in Settings.
+1.  **AI Performance**: Verify that the Settings screen now displays the actual values (e.g., "8.50 tokens/sec") instead of the literal placeholder string.
+2.  **Download Progress**: Verify that the download percentage is correctly displayed during model download.

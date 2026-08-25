@@ -11,6 +11,11 @@ val ColorHealth = Color(0xFF4CAF50)
 val ColorShopping = Color(0xFFE91E63)
 val ColorOthers = Color(0xFF757575)
 
+// Functional Colors
+val ColorSuccess = Color(0xFF4CAF50)
+val ColorWarning = Color(0xFFFFC107)
+val ColorError = Color(0xFFF44336)
+
 // Brand Colors
 val PrimaryColor = Color(0xFF6200EE)
 val PrimaryVariantColor = Color(0xFF3700B3)

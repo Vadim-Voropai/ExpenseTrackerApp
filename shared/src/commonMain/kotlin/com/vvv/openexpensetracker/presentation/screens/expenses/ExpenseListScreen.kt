@@ -64,9 +64,6 @@ import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import openexpensetracker.shared.generated.resources.Res
 import openexpensetracker.shared.generated.resources.action_undo
 import openexpensetracker.shared.generated.resources.expense_deleted
@@ -80,10 +77,9 @@ import openexpensetracker.shared.generated.resources.list_search_placeholder
 import openexpensetracker.shared.generated.resources.list_sync_now
 import openexpensetracker.shared.generated.resources.list_title
 import openexpensetracker.shared.generated.resources.settings_syncing
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseListScreen(
     viewModel: ExpenseListViewModel,
@@ -310,7 +306,9 @@ fun ExpenseListScreen(
                             ExpenseItemRow(
                                 expense = expense,
                                 currency = uiState.currency,
-                                onEdit = { onNavigateToAddEdit(expense.id) }
+                                onEdit = { onNavigateToAddEdit(expense.id) },
+                                formatDate = viewModel::formatDate,
+                                formatAmount = viewModel::formatAmount
                             )
                         }
                     }
@@ -324,7 +322,9 @@ fun ExpenseListScreen(
 fun ExpenseItemRow(
     expense: Expense,
     currency: AppCurrency,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    formatDate: (Long) -> String,
+    formatAmount: (Double) -> String
 ) {
     val dimens = AppTheme.dimens
     val typography = MaterialTheme.typography
@@ -390,29 +390,5 @@ fun ExpenseItemRow(
                 )
             }
         }
-    }
-}
-
-// Helpers
-fun formatDate(timestamp: Long): String {
-    return try {
-        val instant = Instant.fromEpochMilliseconds(timestamp)
-        val tz = TimeZone.currentSystemDefault()
-        val dateTime = instant.toLocalDateTime(tz)
-
-        val month = dateTime.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)
-        val day = dateTime.day.toString().padStart(2, '0')
-        "$month $day, ${dateTime.year}"
-    } catch (_: Exception) {
-        "Unknown Date"
-    }
-}
-
-fun formatAmount(amount: Double): String {
-    val cents = ((amount - amount.toInt()) * 100).toInt()
-    return if (cents == 0) {
-        amount.toInt().toString()
-    } else {
-        "${amount.toInt()}.${cents.toString().padStart(2, '0')}"
     }
 }
