@@ -19,6 +19,5 @@ class DeleteLlmModelUseCase(private val repository: LlmRepository) {
 
 class AnalyzeReceiptLlmUseCase(private val repository: LlmRepository) {
     suspend fun initialize(): Boolean = repository.initialize()
-    suspend fun isReceipt(text: String): Boolean = repository.isReceipt(text)
     suspend fun extractData(text: String): ParsedReceipt? = repository.extractReceiptData(text)
 }

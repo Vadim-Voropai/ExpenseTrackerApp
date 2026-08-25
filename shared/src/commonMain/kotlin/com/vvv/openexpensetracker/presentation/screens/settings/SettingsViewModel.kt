@@ -3,6 +3,8 @@ package com.vvv.openexpensetracker.presentation.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.model.AppCurrency
+import com.vvv.openexpensetracker.domain.repository.LlmBenchmarkResult
+import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
 import com.vvv.openexpensetracker.domain.usecase.DeleteLlmModelUseCase
 import com.vvv.openexpensetracker.domain.usecase.DownloadLlmModelUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetAuthStateUseCase
@@ -35,7 +37,8 @@ data class SettingsUIState(
     val lastSyncTime: Long = 0L,
     val isLlmDownloaded: Boolean = false,
     val isLlmDownloading: Boolean = false,
-    val llmDownloadProgress: Float = 0f
+    val llmDownloadProgress: Float = 0f,
+    val benchmarkResult: LlmBenchmarkResult? = null
 )
 
 class SettingsViewModel(
@@ -48,7 +51,8 @@ class SettingsViewModel(
     private val getLastSyncTimeUseCase: GetLastSyncTimeUseCase,
     private val getLlmStatusUseCase: GetLlmStatusUseCase,
     private val downloadLlmModelUseCase: DownloadLlmModelUseCase,
-    private val deleteLlmModelUseCase: DeleteLlmModelUseCase
+    private val deleteLlmModelUseCase: DeleteLlmModelUseCase,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _isSyncing = MutableStateFlow(false)
@@ -72,10 +76,17 @@ class SettingsViewModel(
         ) { syncing, currency, llmDownloading, llmProgress ->
             FourArgs(syncing, currency, llmDownloading, llmProgress)
         },
-        getLlmStatusUseCase.isModelDownloadedFlow()
-    ) { authInfo, extraInfo, isLlmDownloaded ->
+        combine(
+            preferencesRepository.llmBenchmarkResult,
+            getLlmStatusUseCase.isModelDownloadedFlow(),
+        ) { result, isLlmDownloaded ->
+            Pair(result, isLlmDownloaded)
+        }
+    ) { authInfo, extraInfo, benchInfo ->
         val (token, email, name) = authInfo
         val (syncing, currency, llmDownloading, llmProgress) = extraInfo
+        val (benchmarkResult, isLlmDownloaded) = benchInfo
+        
         SettingsUIState(
             isSignedIn = token != null,
             isSyncing = syncing,
@@ -85,7 +96,8 @@ class SettingsViewModel(
             lastSyncTime = getLastSyncTimeUseCase(),
             isLlmDownloaded = isLlmDownloaded,
             isLlmDownloading = llmDownloading,
-            llmDownloadProgress = llmProgress
+            llmDownloadProgress = llmProgress,
+            benchmarkResult = benchmarkResult,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUIState())
 
@@ -160,6 +172,7 @@ class SettingsViewModel(
         val success = deleteLlmModelUseCase()
         viewModelScope.launch {
             if (success) {
+                preferencesRepository.setLlmBenchmarkResult(null)
                 _effect.send(SettingsUiEffect.ShowSnackbar("Model deleted successfully"))
             } else {
                 _effect.send(SettingsUiEffect.ShowSnackbar("Failed to delete model"))

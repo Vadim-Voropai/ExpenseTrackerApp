@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,7 +67,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import openexpensetracker.shared.generated.resources.*
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -243,6 +244,23 @@ fun SettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text("Delete")
+                                }
+                            }
+
+                            // Performance Metrics
+                            uiState.benchmarkResult?.let { result ->
+                                Text("Performance", style = typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                    Text(
+                                        text = "Token generation Speed: ${formatDecimal(result.tps)} tokens/sec",
+                                        style = typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Average Scan Time: ${formatDecimal(result.durationMs / 1000.0)} sec",
+                                        style = typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                             }
                         }
@@ -436,6 +454,12 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+private fun formatDecimal(value: Double): String {
+    val integerPart = value.toInt()
+    val fractionalPart = ((value - integerPart) * 100).toInt()
+    return "$integerPart.${fractionalPart.toString().padStart(2, '0')}"
 }
 
 @Composable

@@ -9,7 +9,7 @@ import com.vvv.openexpensetracker.domain.usecase.GetCurrencyUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetLlmStatusUseCase
 import com.vvv.openexpensetracker.domain.usecase.SaveExpenseUseCase
-import com.vvv.openexpensetracker.domain.util.ReceiptParser
+import com.vvv.openexpensetracker.domain.util.ParsedReceipt
 import kotlin.random.Random
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,7 +64,7 @@ class AddExpenseViewModel(
             is AddExpenseIntent.AmountChanged -> onAmountChanged(intent.text)
             is AddExpenseIntent.DateChanged -> onDateChanged(intent.timestamp)
             is AddExpenseIntent.CategoryChanged -> onCategoryChanged(intent.category)
-            is AddExpenseIntent.ReceiptScanned -> onReceiptScanned(intent.text)
+            is AddExpenseIntent.ReceiptScanned -> onReceiptScanned(intent.receipt)
             AddExpenseIntent.SaveExpense -> saveExpense()
             AddExpenseIntent.ResetSaveState -> _uiState.update { it.copy(isSaved = false) }
         }
@@ -134,14 +134,63 @@ class AddExpenseViewModel(
         _uiState.update { it.copy(category = newCategory) }
     }
 
-    private fun onReceiptScanned(text: String) {
-        val parsed = ReceiptParser.parse(text)
-        _uiState.update {
-            it.copy(
-                amount = parsed.amount?.toString() ?: it.amount,
-                date = parsed.date ?: it.date,
-                description = parsed.merchant ?: it.description
-            )
+    private fun onReceiptScanned(receipt: ParsedReceipt) {
+        viewModelScope.launch {
+            val mappedCategory = mapCategory(receipt.category)
+            val richDescription = constructDescription(receipt.merchant, receipt.items)
+            
+            _uiState.update {
+                it.copy(
+                    amount = receipt.amount?.let { amt -> formatAmount(amt) } ?: it.amount,
+                    date = receipt.date ?: it.date,
+                    category = mappedCategory ?: it.category,
+                    description = richDescription.ifBlank { it.description },
+                    amountError = null,
+                    descriptionError = null
+                )
+            }
+        }
+    }
+
+    private fun mapCategory(suggested: String?): String? {
+        if (suggested == null) return null
+        
+        val normalized = suggested.trim().uppercase()
+        
+        // 1. Exact match in Category.list
+        Category.list.find { it.uppercase() == normalized }?.let { return it }
+        
+        // 2. Heuristic mapping
+        return when {
+            normalized.contains("FOOD") || normalized.contains("GROCERY") || 
+            normalized.contains("DINING") || normalized.contains("RESTAURANT") -> Category.FOOD
+            normalized.contains("TRANSPORT") || normalized.contains("GAS") || 
+            normalized.contains("FUEL") || normalized.contains("TAXI") || normalized.contains("UBER") -> Category.TRANSPORT
+            normalized.contains("UTIL") || normalized.contains("BILL") || normalized.contains("ELECTRIC") -> Category.UTILITIES
+            normalized.contains("ENT") || normalized.contains("MOVIE") || normalized.contains("GAME") -> Category.ENTERTAINMENT
+            normalized.contains("HEALTH") || normalized.contains("MEDICINE") || normalized.contains("DRUG") || normalized.contains("CLINIC") -> Category.HEALTH
+            normalized.contains("SHOP") || normalized.contains("STORE") || normalized.contains("CLOTH") -> Category.SHOPPING
+            else -> Category.OTHERS
+        }
+    }
+
+    private fun constructDescription(merchant: String?, items: String?): String {
+        return buildString {
+            if (!merchant.isNullOrBlank()) {
+                append(merchant.trim())
+            }
+            if (!items.isNullOrBlank()) {
+                if (isNotEmpty()) append(" ")
+                append("(${items.trim()})")
+            }
+        }.trim()
+    }
+
+    private fun formatAmount(amount: Double): String {
+        return if (amount == amount.toLong().toDouble()) {
+            amount.toLong().toString()
+        } else {
+            amount.toString()
         }
     }
 

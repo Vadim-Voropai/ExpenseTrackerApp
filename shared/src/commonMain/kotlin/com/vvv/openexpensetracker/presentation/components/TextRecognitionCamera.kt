@@ -6,5 +6,7 @@ import androidx.compose.ui.Modifier
 @Composable
 expect fun TextRecognitionCamera(
     modifier: Modifier = Modifier,
-    onTextDetected: (String) -> Unit
+    isPaused: Boolean = false,
+    isReceipt: (String) -> Boolean,
+    onTextDetected: (String) -> Unit,
 )

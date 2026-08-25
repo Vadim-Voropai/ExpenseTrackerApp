@@ -1,7 +1,9 @@
 package com.vvv.openexpensetracker.data.repository
 
+import com.llamatik.library.platform.GenStream
 import com.llamatik.library.platform.LlamaBridge
 import com.vvv.openexpensetracker.data.source.local.LocalStorage
+import com.vvv.openexpensetracker.domain.repository.LlmBenchmarkResult
 import com.vvv.openexpensetracker.domain.repository.LlmRepository
 import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
 import com.vvv.openexpensetracker.domain.util.ParsedReceipt
@@ -10,18 +12,30 @@ import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.utils.io.readAvailable
+import kotlin.time.DurationUnit
+import kotlin.time.TimeSource
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atTime
 import kotlinx.datetime.toInstant
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
 import okio.FileSystem
-import okio.HashingSink
+import okio.HashingSource
 import okio.Path.Companion.toPath
 import okio.buffer
 import okio.use
@@ -45,6 +59,36 @@ class LlmRepositoryImpl(
     private val fs: FileSystem
         get() = localStorage.fileSystem
 
+    private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    init {
+        // Self-healing check: Verify actual file presence and integrity on startup in background
+        repositoryScope.launch {
+            val isVerified = verifyModelIntegrity()
+            preferencesRepository.setLlmDownloaded(isVerified)
+        }
+    }
+
+    private suspend fun verifyModelIntegrity(): Boolean = withContext(Dispatchers.IO) {
+        val path = modelPath.toPath()
+        if (!fs.exists(path)) return@withContext false
+
+        try {
+            val hashingSource = HashingSource.sha256(fs.source(path))
+            hashingSource.buffer().use { source ->
+                val sink = okio.Buffer()
+                while (source.read(sink, 8192L) != -1L) {
+                    sink.clear()
+                }
+            }
+            val calculatedHash = hashingSource.hash.hex()
+            calculatedHash.equals(expectedModelHash, ignoreCase = true)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     override fun isModelDownloadedFlow(): Flow<Boolean> = preferencesRepository.isLlmDownloaded
 
     override suspend fun downloadModel(): Flow<Float> = channelFlow {
@@ -56,50 +100,44 @@ class LlmRepositoryImpl(
             }
         }
 
-        var calculatedHash = ""
-
         try {
             statement.execute { response ->
                 val channel = response.bodyAsChannel()
                 val path = modelPath.toPath()
 
-                val hashingSink = HashingSink.sha256(fs.sink(path))
-                try {
-                    hashingSink.buffer().use { sink ->
-                        val buffer = ByteArray(8192)
-                        while (!channel.isClosedForRead) {
-                            val read = channel.readAvailable(buffer)
-                            if (read == -1) break
-                            sink.write(buffer, 0, read)
-                        }
-                        sink.flush()
+                fs.sink(path).buffer().use { sink ->
+                    val buffer = ByteArray(8192)
+                    while (!channel.isClosedForRead) {
+                        val read = channel.readAvailable(buffer)
+                        if (read == -1) break
+                        sink.write(buffer, 0, read)
                     }
-                    calculatedHash = hashingSink.hash.hex()
-                } finally {
-                    hashingSink.close()
+                    sink.flush()
                 }
             }
 
-            // Ensure UI reaches 100% before starting integrity check
+            // Ensure UI reaches 100%
             send(1.0f)
 
-            if (calculatedHash.equals(expectedModelHash, ignoreCase = true)) {
+            // Reuse the same integrity check logic
+            if (verifyModelIntegrity()) {
                 preferencesRepository.setLlmDownloaded(true)
             } else {
-                val actualHash = calculatedHash.ifEmpty { "EMPTY" }
                 // Integrity check failed - delete corrupted file
                 try {
                     fs.delete(modelPath.toPath())
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 send(0f)
                 preferencesRepository.setLlmDownloaded(false)
-                throw Exception("Integrity mismatch.\nExpected: $expectedModelHash\nActual: $actualHash")
+                throw Exception("Model integrity check failed after download.")
             }
         } catch (e: Exception) {
-            // Cleanup on any error during download/hashing
+            // Cleanup on any error during download/verification
             try {
                 fs.delete(modelPath.toPath())
-            } catch (_: Exception) {}
+            } catch (_: Exception) {
+            }
             send(0f)
             preferencesRepository.setLlmDownloaded(false)
             throw e
@@ -116,7 +154,7 @@ class LlmRepositoryImpl(
                 topK = 40,
                 repeatPenalty = 1.1f,
                 contextLength = 2048,
-                numThreads = 4,
+                numThreads = 8,
                 useMmap = true,
                 flashAttention = false,
                 batchSize = 512,
@@ -143,56 +181,94 @@ class LlmRepositoryImpl(
         }
     }
 
-    override suspend fun isReceipt(text: String): Boolean {
-        val prompt = """
-            <|system|>
-            You are a receipt analyzer. Answer only 'Yes' or 'No'.
-            Is the following text from a POS receipt?
-            </s>
-            <|user|>
-            ${text.take(1000)}
-            </s>
-            <|assistant|>
+    override suspend fun extractReceiptData(text: String): ParsedReceipt? =
+        withContext(Dispatchers.IO) {
+            val cleanedText = text.replace("\n", " ").take(2000)
+            val prompt = """
+            Input: "$cleanedText"
+            Extract the data into JSON with keys "vendor", "date" (YYYY-MM-DD), "total" (number), "category", "items".
+            JSON: {
         """.trimIndent()
 
-        val response = LlamaBridge.generate(prompt).trim()
-        return response.contains("Yes", ignoreCase = true)
-    }
+            try {
+                println("Receipt prompt (Anchor): $prompt")
 
-    override suspend fun extractReceiptData(text: String): ParsedReceipt? {
-        val prompt = """
-            <|system|>
-            Extract receipt data into JSON.
-            Rules:
-            1. Output ONLY JSON.
-            2. Fields: "vendor", "date", "total".
-            3. Date format: YYYY-MM-DD.
-            </s>
-            <|user|>
-            ${text.take(2000)}
-            </s>
-            <|assistant|>
-        """.trimIndent()
+                var tokenCount = 0
+                var firstTokenTime: kotlin.time.TimeMark? = null
+                val startTime = TimeSource.Monotonic.markNow()
+                val resultBuilder = StringBuilder("{")
 
-        return try {
-            val response = LlamaBridge.generate(prompt)
-            val jsonStart = response.indexOf('{')
-            val jsonEnd = response.lastIndexOf('}') + 1
-            if ((jsonStart >= 0) && (jsonEnd > jsonStart)) {
-                val jsonStr = response.substring(jsonStart, jsonEnd)
-                val json = Json { ignoreUnknownKeys = true }
-                val map = json.decodeFromString<Map<String, String?>>(jsonStr)
+                val deferred = CompletableDeferred<String>()
+
+                LlamaBridge.generateStream(prompt, object : GenStream {
+                    override fun onDelta(text: String) {
+                        if (tokenCount == 0) {
+                            firstTokenTime = TimeSource.Monotonic.markNow()
+                        }
+                        tokenCount++
+                        resultBuilder.append(text)
+                    }
+
+                    override fun onComplete() {
+                        deferred.complete(resultBuilder.toString())
+                    }
+
+                    override fun onError(message: String) {
+                        deferred.completeExceptionally(Exception(message))
+                    }
+                })
+
+                val response = deferred.await().trim()
+
+                // Performance calculation
+                val totalDuration = startTime.elapsedNow()
+                val decodeDuration = firstTokenTime?.elapsedNow() ?: totalDuration
+                val tps = if (decodeDuration.toDouble(DurationUnit.SECONDS) > 0) {
+                    tokenCount.toDouble() / decodeDuration.toDouble(DurationUnit.SECONDS)
+                } else 0.0
+
+                // Save metrics
+                preferencesRepository.setLlmBenchmarkResult(
+                    LlmBenchmarkResult(tps, totalDuration.toLong(DurationUnit.MILLISECONDS))
+                )
+
+                println("Receipt full JSON: $response")
+
+                // Robust extraction: isolate the JSON block in case of trailing noise
+                val jsonStart = response.indexOf('{')
+                val jsonEnd = response.lastIndexOf('}') + 1
+                val jsonStr = if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                    response.substring(jsonStart, jsonEnd)
+                } else {
+                    response
+                }
+
+                val json = Json {
+                    ignoreUnknownKeys = true
+                    coerceInputValues = true
+                }
+
+                val jsonElement = json.parseToJsonElement(jsonStr)
+                val jsonObject = jsonElement as? JsonObject ?: return@withContext null
+
+                fun JsonElement?.asString(): String? =
+                    (this as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+
+                fun JsonElement?.asDouble(): Double? =
+                    (this as? JsonPrimitive)?.doubleOrNull?.takeIf { it > 0.0 }
 
                 ParsedReceipt(
-                    amount = map["total"]?.toDoubleOrNull(),
-                    date = map["date"]?.let { parseDate(it) },
-                    merchant = map["vendor"]
+                    amount = jsonObject["total"].asDouble(),
+                    date = jsonObject["date"].asString()?.let { parseDate(it) },
+                    category = jsonObject["category"].asString(),
+                    merchant = jsonObject["vendor"].asString(),
+                    items = jsonObject["items"].asString(),
                 )
-            } else null
-        } catch (_: Exception) {
-            null
+            } catch (e: Exception) {
+                println("Error parsing LLM response: ${e.message}")
+                null
+            }
         }
-    }
 
     private fun parseDate(dateStr: String): Long? {
         return try {

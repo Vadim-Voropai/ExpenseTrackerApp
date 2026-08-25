@@ -19,7 +19,9 @@ import kotlinx.coroutines.asExecutor
 @Composable
 actual fun TextRecognitionCamera(
     modifier: Modifier,
-    onTextDetected: (String) -> Unit
+    isPaused: Boolean,
+    isReceipt: (String) -> Boolean,
+    onTextDetected: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -35,8 +37,10 @@ actual fun TextRecognitionCamera(
             ImageAnalysis.COORDINATE_SYSTEM_VIEW_REFERENCED,
             mainExecutor
         ) { result ->
+            if (isPaused) return@MlKitAnalyzer
+            
             val visionText = result.getValue(textRecognizer)
-            if (visionText != null && visionText.text.isNotEmpty()) {
+            if (visionText != null && visionText.text.isNotEmpty() && isReceipt(visionText.text)) {
                 Log.e("TAG", "TextRecognitionCamera: ${visionText.text}")
                 onTextDetected(visionText.text)
             }

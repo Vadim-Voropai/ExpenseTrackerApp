@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vvv.openexpensetracker.domain.util.ParsedReceipt
 import com.vvv.openexpensetracker.presentation.components.CameraPermissionHandler
 import com.vvv.openexpensetracker.presentation.components.TextRecognitionCamera
 import kotlinx.coroutines.flow.collectLatest
@@ -45,7 +46,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ScanReceiptScreen(
     viewModel: ScanReceiptViewModel,
-    onReceiptDetected: (String) -> Unit,
+    onReceiptDetected: (ParsedReceipt) -> Unit,
     navigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -55,7 +56,7 @@ fun ScanReceiptScreen(
         viewModel.effect.collectLatest { effect ->
             when (effect) {
                 is ScanReceiptUiEffect.ReceiptFound -> {
-                    onReceiptDetected(effect.text)
+                    onReceiptDetected(effect.parsed)
                     navigateBack()
                 }
                 is ScanReceiptUiEffect.ShowError -> {
@@ -103,6 +104,8 @@ fun ScanReceiptScreen(
             } else if (isPermissionGranted) {
                 TextRecognitionCamera(
                     modifier = Modifier.fillMaxSize(),
+                    isPaused = uiState.isProcessing,
+                    isReceipt = viewModel::isReceipt,
                     onTextDetected = { text ->
                         viewModel.onIntent(ScanReceiptIntent.TextDetected(text))
                     }

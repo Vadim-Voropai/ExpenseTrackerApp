@@ -1,5 +1,5 @@
-- [ ] Refactor `LlmRepositoryImpl.kt` for robust hashing and verification
-    - [ ] Add try-catch around hashing logic
-    - [ ] Include actual/expected hashes in exceptions
-    - [ ] Ensure proper stream closure
-- [ ] Verify build and monitor actual calculated hash
+- [ ] Remove `runBenchmark` from `LlmRepository`
+- [ ] Delete `RunLlmBenchmarkUseCase`
+- [ ] Update `LlmRepositoryImpl.kt` to calculate performance during extraction
+- [ ] Update Settings MVI components (remove benchmark button/logic)
+- [ ] Verify build and automatic benchmarking during scan

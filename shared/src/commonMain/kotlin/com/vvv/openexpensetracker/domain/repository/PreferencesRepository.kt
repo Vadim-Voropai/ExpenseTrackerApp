@@ -9,4 +9,7 @@ interface PreferencesRepository {
     
     val isLlmDownloaded: StateFlow<Boolean>
     fun setLlmDownloaded(downloaded: Boolean)
+
+    val llmBenchmarkResult: StateFlow<LlmBenchmarkResult?>
+    fun setLlmBenchmarkResult(result: LlmBenchmarkResult?)
 }

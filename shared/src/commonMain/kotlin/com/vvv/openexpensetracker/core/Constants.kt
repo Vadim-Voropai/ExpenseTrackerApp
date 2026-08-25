@@ -14,6 +14,9 @@ object Constants {
     const val KEY_LAST_SYNC_TIME = "last_sync_time"
     const val KEY_FOLDER_ID = "google_drive_folder_id"
     const val KEY_FILE_ID = "google_drive_file_id"
+    const val KEY_LLM_DOWNLOADED = "llm_model_downloaded"
+    const val KEY_LLM_TPS = "llm_tps"
+    const val KEY_LLM_BENCHMARK_DURATION = "llm_benchmark_duration"
 
     // Google API URLs
     const val GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"

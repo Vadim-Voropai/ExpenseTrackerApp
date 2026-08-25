@@ -35,6 +35,7 @@ import com.vvv.openexpensetracker.presentation.screens.scan_receipt.ScanReceiptV
 import com.vvv.openexpensetracker.presentation.screens.settings.SettingsViewModel
 import com.vvv.openexpensetracker.presentation.screens.stats.StatsViewModel
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.auth.Auth
 import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer
@@ -42,7 +43,6 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
-import io.ktor.client.plugins.HttpTimeout
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -128,7 +128,7 @@ val dataModule = module {
     single { GoogleDriveApi(get()) }
     single<GoogleDriveRepository> { GoogleDriveRepositoryImpl(get(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get()) }
-    single<PreferencesRepository> { PreferencesRepositoryImpl() }
+    single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }
     single<LlmRepository> { LlmRepositoryImpl(get(named("downloadHttpClient")), get(), get()) }
 }
 
@@ -155,12 +155,57 @@ val useCaseModule = module {
 }
 
 val viewModelModule = module {
-    factory { ExpenseListViewModel(get(), get(), get(), get(), get()) }
-    factory { AddExpenseViewModel(get(), get(), get(), get()) }
-    factory { StatsViewModel(get(), get()) }
-    factory { SettingsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    factory { ScanReceiptViewModel(get()) }
-    factory { MainViewModel(get(), get(), get(), get()) }
+    factory {
+        ExpenseListViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
+    factory {
+        AddExpenseViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
+    factory {
+        StatsViewModel(
+            get(),
+            get(),
+        )
+    }
+    factory {
+        SettingsViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
+    factory {
+        ScanReceiptViewModel(
+            get(),
+        )
+    }
+    factory {
+        MainViewModel(
+            get(),
+            get(),
+            get(),
+            get(),
+        )
+    }
 }
 
 fun initKoin(appDeclaration: KoinApplication.() -> Unit = {}) {

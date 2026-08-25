@@ -10,18 +10,24 @@ import platform.Foundation.*
 import platform.UIKit.*
 import platform.Vision.*
 import platform.CoreMedia.CMSampleBufferRef
+import platform.darwin.dispatch_get_main_queue
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun TextRecognitionCamera(
     modifier: Modifier,
+    isPaused: Boolean,
+    isReceipt: (String) -> Boolean,
     onTextDetected: (String) -> Unit
 ) {
     val viewController = remember {
         TextRecognitionViewController().apply {
             this.onTextDetected = onTextDetected
+            this.isReceipt = isReceipt
         }
     }
+
+    viewController.isPaused = isPaused
     
     UIKitViewController(
         factory = { viewController },
@@ -31,6 +37,9 @@ actual fun TextRecognitionCamera(
 
 private class TextRecognitionViewController : UIViewController(), AVCaptureVideoDataOutputSampleBufferDelegateProtocol {
     var onTextDetected: ((String) -> Unit)? = null
+    var isReceipt: ((String) -> Boolean)? = null
+    var isPaused: Boolean = false
+    
     private val captureSession = AVCaptureSession()
 
     @OptIn(ExperimentalForeignApi::class)
@@ -49,7 +58,7 @@ private class TextRecognitionViewController : UIViewController(), AVCaptureVideo
         }
 
         val output = AVCaptureVideoDataOutput()
-        output.setSampleBufferDelegate(this, platform.darwin.dispatch_get_main_queue())
+        output.setSampleBufferDelegate(this, dispatch_get_main_queue())
         
         if (captureSession.canAddOutput(output)) {
             captureSession.addOutput(output)
@@ -69,6 +78,8 @@ private class TextRecognitionViewController : UIViewController(), AVCaptureVideo
         didOutputSampleBuffer: CMSampleBufferRef?,
         fromConnection: AVCaptureConnection
     ) {
+        if (isPaused) return
+        
         val buffer = didOutputSampleBuffer ?: return
         val handler = VNImageRequestHandler(cMSampleBuffer = buffer, options = emptyMap<Any?, Any?>())
         
@@ -77,7 +88,7 @@ private class TextRecognitionViewController : UIViewController(), AVCaptureVideo
             val recognizedText = results?.joinToString("\n") { observation ->
                 observation.topCandidates(1u).firstOrNull()?.let { (it as? VNRecognizedText)?.string } ?: ""
             }
-            if (!recognizedText.isNullOrEmpty()) {
+            if (!recognizedText.isNullOrEmpty() && (isReceipt?.invoke(recognizedText) == true)) {
                 onTextDetected?.invoke(recognizedText)
             }
         }

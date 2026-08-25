@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vvv.openexpensetracker.domain.usecase.AnalyzeReceiptLlmUseCase
 import com.vvv.openexpensetracker.domain.util.ParsedReceipt
+import com.vvv.openexpensetracker.domain.util.ReceiptParser
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,7 @@ class ScanReceiptViewModel(
     fun onIntent(intent: ScanReceiptIntent) {
         when (intent) {
             is ScanReceiptIntent.TextDetected -> processText(intent.text)
-            else -> {} // Download handled in settings now
+            else -> {}
         }
     }
 
@@ -57,25 +58,26 @@ class ScanReceiptViewModel(
         }
     }
 
+    fun isReceipt(text: String): Boolean {
+        return ReceiptParser.isReceipt(text)
+    }
+
     private fun processText(text: String) {
         if (!_uiState.value.isReady || _uiState.value.isProcessing) return
 
+        _uiState.update { it.copy(isProcessing = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isProcessing = true) }
-            
-            if (analyzeReceiptLlmUseCase.isReceipt(text)) {
-                val parsed = analyzeReceiptLlmUseCase.extractData(text)
-                if (parsed != null) {
-                    _uiState.update {
-                        it.copy(
-                            amountFound = parsed.amount != null,
-                            dateFound = parsed.date != null
-                        )
-                    }
-                    
-                    if (parsed.amount != null && parsed.date != null) {
-                        _effect.send(ScanReceiptUiEffect.ReceiptFound(text, parsed))
-                    }
+            val parsed = analyzeReceiptLlmUseCase.extractData(text)
+            if (parsed != null) {
+                _uiState.update {
+                    it.copy(
+                        amountFound = parsed.amount != null,
+                        dateFound = parsed.date != null,
+                    )
+                }
+
+                if (parsed.amount != null && parsed.date != null) {
+                    _effect.send(ScanReceiptUiEffect.ReceiptFound(text, parsed))
                 }
             }
             

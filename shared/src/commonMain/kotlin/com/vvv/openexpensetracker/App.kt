@@ -69,8 +69,8 @@ fun App() {
                 composable<ScanReceiptDestination> {
                     ScanReceiptScreen(
                         viewModel = scanViewModel,
-                        onReceiptDetected = { text ->
-                            addViewModel.onIntent(AddExpenseIntent.ReceiptScanned(text))
+                        onReceiptDetected = { receipt ->
+                            addViewModel.onIntent(AddExpenseIntent.ReceiptScanned(receipt))
                         },
                         navigateBack = {
                             navController.popBackStack()
