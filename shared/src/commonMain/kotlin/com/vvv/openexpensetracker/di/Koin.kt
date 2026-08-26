@@ -22,6 +22,8 @@ import com.vvv.openexpensetracker.domain.usecase.GetExpensesUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetLastSyncTimeUseCase
 import com.vvv.openexpensetracker.domain.usecase.GetLlmStatusUseCase
 import com.vvv.openexpensetracker.domain.usecase.HandleSignInResultUseCase
+import com.vvv.openexpensetracker.domain.usecase.InitializeLlmUseCase
+import com.vvv.openexpensetracker.domain.usecase.NormalizeReceiptLlmUseCase
 import com.vvv.openexpensetracker.domain.usecase.SaveExpenseUseCase
 import com.vvv.openexpensetracker.domain.usecase.SetCurrencyUseCase
 import com.vvv.openexpensetracker.domain.usecase.SignInUseCase
@@ -151,6 +153,8 @@ val useCaseModule = module {
     single { GetLlmStatusUseCase(get()) }
     single { DownloadLlmModelUseCase(get()) }
     single { DeleteLlmModelUseCase(get()) }
+    single { InitializeLlmUseCase(get()) }
+    single { NormalizeReceiptLlmUseCase(get()) }
     single { AnalyzeReceiptLlmUseCase(get()) }
 }
 
@@ -195,6 +199,8 @@ val viewModelModule = module {
     }
     factory {
         ScanReceiptViewModel(
+            get(),
+            get(),
             get(),
         )
     }

@@ -46,12 +46,12 @@ class LlmRepositoryImpl(
     private val preferencesRepository: PreferencesRepository
 ) : LlmRepository {
 
-    private val modelFileName = "tinyllama-1.1b.gguf"
+    private val modelFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
     private val modelUrl =
-        "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+        "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
-    // Expected SHA-256 hash for tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
-    private val expectedModelHash = "9fecc3b3cd76bba89d504f29b616eedf7da85b96540e490ca5824d3f7d2776a0"
+    // Expected SHA-256 hash for qwen2.5-1.5b-instruct-q4_k_m.gguf
+    private val expectedModelHash = "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e"
 
     private val modelPath: String
         get() = "${localStorage.getFilesDir()}/$modelFileName"
@@ -149,11 +149,11 @@ class LlmRepositoryImpl(
             LlamaBridge.initGenerateModel(modelPath)
             LlamaBridge.updateGenerateParams(
                 temperature = 0.1f,
-                maxTokens = 256,
+                maxTokens = 512,
                 topP = 0.95f,
                 topK = 40,
                 repeatPenalty = 1.1f,
-                contextLength = 2048,
+                contextLength = 4096, // Increased context for Qwen 2.5
                 numThreads = 8,
                 useMmap = true,
                 flashAttention = false,
@@ -167,7 +167,7 @@ class LlmRepositoryImpl(
         }
     }
 
-    override fun getModelName(): String = "TinyLlama 1.1B"
+    override fun getModelName(): String = "Qwen 2.5 1.5B"
 
     override fun deleteModel(): Boolean {
         return try {
@@ -181,22 +181,94 @@ class LlmRepositoryImpl(
         }
     }
 
+    override suspend fun normalizeReceiptData(text: String): String {
+        val cleanedText = text.replace("\n", "|").trim().take(3000)
+        // Advanced prompt for Qwen 2.5 to repair and normalize OCR text
+        val prompt = """
+            <|im_start|>system
+            You are an expert POS receipt data cleaner. Your task is to repair "broken" OCR text from physical receipts.
+            Fix character substitutions (e.g., 'S' for '5', 'O' for '0', '|' for '1'), repair fragmented vendor names, and normalize dates, in case when date is unclear set today.
+            Rules:
+            1. Output ONLY the repaired and structured JSON.
+            2. Fields: "vendor", "date" (YYYY-MM-DD), "total" (number), "category", "items".
+            3. If a field is beyond repair, use null.
+            <|im_end|>
+            <|im_start|>user
+            Repair and extract from this messy OCR:
+            "$cleanedText"
+            <|im_end|>
+            <|im_start|>assistant
+            {
+        """.trimIndent()
+        
+        return makeLLMRequest(prompt) ?: text
+    }
+
     override suspend fun extractReceiptData(text: String): ParsedReceipt? =
         withContext(Dispatchers.IO) {
-            val cleanedText = text.replace("\n", " ").take(2000)
+            val cleanedText = text.replace("\n", " ").trim().take(2000)
+            // Using ChatML format for Qwen 2.5
             val prompt = """
-            Input: "$cleanedText"
-            Extract the data into JSON with keys "vendor", "date" (YYYY-MM-DD), "total" (number), "category", "items".
-            JSON: {
-        """.trimIndent()
+                <|im_start|>system
+                You are a POS receipt data extractor. Extract data from the user input into JSON.
+                Fields: "vendor", "date" (YYYY-MM-DD), "total" (number), "category", "items".
+                If unknown, use null or 0.0.
+                <|im_end|>
+                <|im_start|>user
+                Input: "$cleanedText"
+                <|im_end|>
+                <|im_start|>assistant
+                {
+            """.trimIndent()
 
             try {
-                println("Receipt prompt (Anchor): $prompt")
+                val response = makeLLMRequest(prompt) ?: return@withContext null
+                // Robust extraction: isolate the JSON block
+                val jsonStart = response.indexOf('{')
+                val jsonEnd = response.lastIndexOf('}') + 1
+                val jsonStr = if (jsonStart in 0..<jsonEnd) {
+                    response.substring(jsonStart, jsonEnd)
+                } else {
+                    response
+                }
+
+                val json = Json {
+                    ignoreUnknownKeys = true
+                    coerceInputValues = true
+                }
+
+                val jsonElement = json.parseToJsonElement(jsonStr)
+                val jsonObject = jsonElement as? JsonObject ?: return@withContext null
+
+                fun JsonElement?.asString(): String? =
+                    (this as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+
+                fun JsonElement?.asDouble(): Double? =
+                    (this as? JsonPrimitive)?.doubleOrNull?.takeIf { it > 0.0 }
+
+                ParsedReceipt(
+                    amount = jsonObject["total"].asDouble(),
+                    date = jsonObject["date"].asString()?.let { parseDate(it) },
+                    category = jsonObject["category"].asString(),
+                    merchant = jsonObject["vendor"].asString(),
+                    items = jsonObject["items"].asString(),
+                )
+            } catch (e: Exception) {
+                println("Error parsing LLM response: ${e.message}")
+                null
+            }
+        }
+
+    private suspend fun makeLLMRequest(prompt: String): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                println("Receipt prompt (ChatML): $prompt")
 
                 var tokenCount = 0
                 var firstTokenTime: kotlin.time.TimeMark? = null
                 val startTime = TimeSource.Monotonic.markNow()
-                val resultBuilder = StringBuilder("{")
+                // If the prompt already contains the opening '{', we start with it
+                val resultBuilder = StringBuilder(if (prompt.endsWith("{")) "{" else "")
 
                 val deferred = CompletableDeferred<String>()
 
@@ -233,40 +305,10 @@ class LlmRepositoryImpl(
                 )
 
                 println("Receipt full JSON: $response")
-
-                // Robust extraction: isolate the JSON block in case of trailing noise
-                val jsonStart = response.indexOf('{')
-                val jsonEnd = response.lastIndexOf('}') + 1
-                val jsonStr = if (jsonStart >= 0 && jsonEnd > jsonStart) {
-                    response.substring(jsonStart, jsonEnd)
-                } else {
-                    response
-                }
-
-                val json = Json {
-                    ignoreUnknownKeys = true
-                    coerceInputValues = true
-                }
-
-                val jsonElement = json.parseToJsonElement(jsonStr)
-                val jsonObject = jsonElement as? JsonObject ?: return@withContext null
-
-                fun JsonElement?.asString(): String? =
-                    (this as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
-
-                fun JsonElement?.asDouble(): Double? =
-                    (this as? JsonPrimitive)?.doubleOrNull?.takeIf { it > 0.0 }
-
-                ParsedReceipt(
-                    amount = jsonObject["total"].asDouble(),
-                    date = jsonObject["date"].asString()?.let { parseDate(it) },
-                    category = jsonObject["category"].asString(),
-                    merchant = jsonObject["vendor"].asString(),
-                    items = jsonObject["items"].asString(),
-                )
+                return@withContext response
             } catch (e: Exception) {
                 println("Error parsing LLM response: ${e.message}")
-                null
+                return@withContext null
             }
         }
 

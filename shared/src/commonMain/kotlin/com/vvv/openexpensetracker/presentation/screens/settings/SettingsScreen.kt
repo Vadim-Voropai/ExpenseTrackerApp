@@ -236,7 +236,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(dimens.spacingNormal))
+                    Spacer(modifier = Modifier.height(dimens.spacingSmall))
 
                     if (uiState.isLlmDownloaded) {
                         Column {
@@ -245,20 +245,6 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = ColorSuccess,
-                                        modifier = Modifier.size(dimens.progressIndicatorSizeNormal)
-                                    )
-                                    Spacer(modifier = Modifier.width(dimens.spacingSmall))
-                                    Text(
-                                        text = stringResource(Res.string.settings_ai_ready),
-                                        style = typography.bodyMedium,
-                                        color = ColorSuccess
-                                    )
-                                }
                                 Text(
                                     text = stringResource(Res.string.llm_model_name),
                                     style = typography.labelSmall,
@@ -280,7 +266,6 @@ fun SettingsScreen(
                             }
 
                             // Performance Metrics
-                            Spacer(modifier = Modifier.height(dimens.spacingSmall))
                             Text(
                                 text = stringResource(Res.string.settings_ai_performance_title),
                                 style = typography.labelMedium.copy(fontWeight = FontWeight.Bold)

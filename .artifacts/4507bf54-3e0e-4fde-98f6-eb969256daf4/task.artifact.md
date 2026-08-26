@@ -1,2 +1,4 @@
-- [x] Update `strings.xml` to use positional placeholders (`%1$s`, `%1$d`)
-- [x] Verify fix in `SettingsScreen.kt`
+- [x] Refactor `TextRecognitionCamera.android.kt` to stop/start OCR pipeline based on `isPaused`
+- [x] Remove debug `Log.e` in `TextRecognitionCamera.android.kt`
+- [x] Verify `ScanReceiptViewModel.kt` error handling for auto-resume
+- [x] Verify logs silence and recovery in build

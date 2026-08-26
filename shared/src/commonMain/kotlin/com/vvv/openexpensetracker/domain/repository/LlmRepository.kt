@@ -14,5 +14,6 @@ interface LlmRepository {
     suspend fun initialize(): Boolean
     fun getModelName(): String
     fun deleteModel(): Boolean
+    suspend fun normalizeReceiptData(text: String): String
     suspend fun extractReceiptData(text: String): ParsedReceipt?
 }

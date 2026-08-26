@@ -17,7 +17,14 @@ class DeleteLlmModelUseCase(private val repository: LlmRepository) {
     operator fun invoke(): Boolean = repository.deleteModel()
 }
 
+class InitializeLlmUseCase(private val repository: LlmRepository) {
+    suspend operator fun invoke(): Boolean = repository.initialize()
+}
+
+class NormalizeReceiptLlmUseCase(private val repository: LlmRepository) {
+    suspend operator fun invoke(text: String): String = repository.normalizeReceiptData(text)
+}
+
 class AnalyzeReceiptLlmUseCase(private val repository: LlmRepository) {
-    suspend fun initialize(): Boolean = repository.initialize()
-    suspend fun extractData(text: String): ParsedReceipt? = repository.extractReceiptData(text)
+    suspend operator fun invoke(text: String): ParsedReceipt? = repository.extractReceiptData(text)
 }

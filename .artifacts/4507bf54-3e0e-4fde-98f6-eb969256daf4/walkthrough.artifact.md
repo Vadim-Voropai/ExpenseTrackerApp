@@ -1,27 +1,31 @@
-# Fix String Resource Placeholder Replacement Walkthrough
+# Log Silence and Auto-Resume Scanning Walkthrough
 
-I have fixed the issue where string resource placeholders (like `%s`) were not being correctly replaced in the UI.
-
-## The Problem
-In Compose Multiplatform, the resource library requires **positional placeholders** (e.g., `%1$s`) in the `strings.xml` file. Simple placeholders like `%s` or `%d` are often ignored or displayed as literal characters if they are not indexed.
+I have refactored the camera and scanning logic to eliminate noisy OCR logs and ensure that scanning automatically resumes if AI data extraction fails.
 
 ## Changes Made
 
-### 1. Updated String Templates
-- **[MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)**:
-    - Updated `settings_ai_tps_label`: `%s` -> `%1$s`
-    - Updated `settings_ai_time_label`: `%s` -> `%1$s`
-    - Updated `settings_ai_download_progress`: `%d%%` -> `%1$d%%`
-    - These changes ensure that the first argument passed to `stringResource` is correctly mapped to the placeholder.
+### 1. Dynamic Camera Analyzer Lifecycle
+- **[MODIFY] [TextRecognitionCamera.android.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/androidMain/kotlin/com/vvv/openexpensetracker/presentation/components/TextRecognitionCamera.android.kt)**:
+    - Moved the OCR analyzer attachment into a `LaunchedEffect(isPaused)`.
+    - **Total Silence**: When the AI starts processing (`isPaused = true`), the app now calls `controller.clearImageAnalysisAnalyzer()`. This physically stops the OCR pipeline, which is the only way to silence those low-level "visionkit pipeline" logs.
+    - **Optimized Resources**: Stopping the analyzer during inference saves battery and CPU cycles.
+    - Removed debug `Log.e` calls.
+
+### 2. Robust Auto-Resume Logic
+- **[MODIFY] [ScanReceiptViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/scan_receipt/ScanReceiptViewModel.kt)**:
+    - Wrapped the AI extraction logic in a `try-catch-finally` block.
+    - **Guaranteed Recovery**: The `isProcessing` flag is now guaranteed to be reset to `false` in the `finally` block, regardless of whether the AI succeeds or fails.
+    - This signal travels back to the `ScanReceiptScreen`, which then re-activates the camera analyzer, allowing the user to immediately try scanning again without leaving the screen.
 
 ## Verification Results
 
 ### Build Verification
 - **Success**: The project was built successfully with `:androidApp:assembleDebug`.
 
-### UI Accuracy
-- **Correct Formatting**: The Settings screen now correctly displays dynamic values like "8.50 tokens/sec" and "1.20 sec" instead of showing the raw placeholder text.
-- **Progress Tracking**: The download percentage will now correctly show as "Downloading model: 45%" instead of just the static label.
+### UI/UX Benefits
+- **Clean Console**: The repetitive "OCR process succeeded..." logs are gone when the AI is working.
+- **Fail-Safe Scanning**: If the AI model fails to extract data (e.g., due to poor lighting or incomplete capture), the centered spinner disappears and the camera instantly resumes, providing a seamless retry experience.
+- **Improved Performance**: Reduced background processing contention between the OCR engine and the LLM inference engine.
 
-> [!TIP]
-> When using multiple variables in a single string, you can use `%1$s`, `%2$s`, etc., to control the order and mapping of arguments.
+> [!IMPORTANT]
+> The auto-resume feature makes the scanner feel much more reliable, as users are no longer "stuck" if the AI can't quite make sense of a particular frame.

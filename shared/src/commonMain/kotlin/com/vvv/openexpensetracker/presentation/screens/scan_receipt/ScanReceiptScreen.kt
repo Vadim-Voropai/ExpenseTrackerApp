@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -110,56 +111,66 @@ fun ScanReceiptScreen(
                     }
                 }
             } else if (isPermissionGranted) {
-                TextRecognitionCamera(
-                    modifier = Modifier.fillMaxSize(),
-                    isPaused = uiState.isProcessing,
-                    isReceipt = viewModel::isReceipt,
-                    onTextDetected = { text ->
-                        viewModel.onIntent(ScanReceiptIntent.TextDetected(text))
-                    }
-                )
-                
-                // Status Overlay
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(dimens.spacingNormal),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    TextRecognitionCamera(
+                        modifier = Modifier.fillMaxSize(),
+                        isPaused = uiState.isProcessing,
+                        isReceipt = viewModel::isReceipt,
+                        onTextDetected = { text ->
+                            viewModel.onIntent(ScanReceiptIntent.TextDetected(text))
+                        }
+                    )
+
                     if (uiState.isProcessing) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(dimens.progressIndicatorSizeNormal),
-                                strokeWidth = dimens.strokeWidthSmall,
-                                color = Color.White
-                            )
-                            Spacer(modifier = Modifier.width(dimens.spacingSmall))
-                            Text(
-                                text = stringResource(Res.string.scan_analyzing),
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                        // Centered Processing Overlay
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(dimens.iconSizeExtraLarge),
+                                    strokeWidth = dimens.strokeWidthSmall
+                                )
+                                Spacer(modifier = Modifier.height(dimens.spacingNormal))
+                                Text(
+                                    text = stringResource(Res.string.scan_analyzing),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
                         }
                     } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            DetectionStatusItem(
-                                label = stringResource(Res.string.scan_label_amount),
-                                isFound = uiState.amountFound
-                            )
-                            Spacer(modifier = Modifier.width(dimens.spacingLarge))
-                            DetectionStatusItem(
-                                label = stringResource(Res.string.scan_label_date),
-                                isFound = uiState.dateFound
+                        // Status Overlay (Only show when not processing)
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .background(Color.Black.copy(alpha = 0.6f))
+                                .padding(dimens.spacingNormal),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                DetectionStatusItem(
+                                    label = stringResource(Res.string.scan_label_amount),
+                                    isFound = uiState.amountFound
+                                )
+                                Spacer(modifier = Modifier.width(dimens.spacingLarge))
+                                DetectionStatusItem(
+                                    label = stringResource(Res.string.scan_label_date),
+                                    isFound = uiState.dateFound
+                                )
+                            }
+                            Text(
+                                text = stringResource(Res.string.scan_guidance),
+                                color = Color.White.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(top = dimens.spacingSmall)
                             )
                         }
-                        Text(
-                            text = stringResource(Res.string.scan_guidance),
-                            color = Color.White.copy(alpha = 0.8f),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(top = dimens.spacingSmall)
-                        )
                     }
                 }
             } else {

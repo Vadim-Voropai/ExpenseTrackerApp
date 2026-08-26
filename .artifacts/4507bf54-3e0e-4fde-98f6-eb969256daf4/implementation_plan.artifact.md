@@ -1,27 +1,28 @@
-# Fix String Resource Placeholder Replacement
+# Disable Noisy Logs and Support Auto-Resume Scanning
 
-This plan fixes the issue where `%s` and `%d` placeholders in `strings.xml` are not being correctly replaced by values in Compose Multiplatform. We will update the placeholders to use the required positional format (e.g., `%1$s`).
+This plan silences repetitive OCR logs and ensures that scanning automatically resumes if AI data extraction fails. We will achieve this by dynamically managing the camera's analyzer based on the app's processing state.
 
 ## Proposed Changes
 
-### [Resources]
+### [Presentation Layer - Components]
 
-#### [MODIFY] [strings.xml](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/composeResources/values/strings.xml)
-Update all string templates to use positional placeholders:
-- `settings_ai_tps_label`: change `%s` to `%1$s`.
-- `settings_ai_time_label`: change `%s` to `%1$s`.
-- `settings_ai_download_progress`: change `%d%%` to `%1$d%%`.
+#### [MODIFY] [TextRecognitionCamera.android.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/androidMain/kotlin/com/vvv/openexpensetracker/presentation/components/TextRecognitionCamera.android.kt)
+- **Dynamic Analyzer Lifecycle**:
+    - Move the `controller.setImageAnalysisAnalyzer` logic into a `LaunchedEffect(isPaused)`.
+    - **When `isPaused` is true**: Call `controller.clearImageAnalysisAnalyzer()`. This stops the VisionKit pipeline, saving battery and silencing "OCR process succeeded" logs.
+    - **When `isPaused` is false**: Re-attach the `MlKitAnalyzer`. This ensures that if the AI finishes (successfully or with an error), the camera immediately starts looking for text again.
+- **Clean Logging**: Remove the `Log.e("TAG", ...)` debug statement.
 
-### [Presentation Layer - Settings]
+### [Presentation Layer - Scan Receipt]
 
-#### [MODIFY] [SettingsScreen.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/settings/SettingsScreen.kt)
-- Ensure that `stringResource` is called with the arguments correctly after the XML change.
+#### [MODIFY] [ScanReceiptViewModel.kt](file:///Users/vadim/OutsourceProjects/Android/learning/ExpenseTrackerApp/shared/src/commonMain/kotlin/com/vvv/openexpensetracker/presentation/screens/scan_receipt/ScanReceiptViewModel.kt)
+- Ensure the `isProcessing = false` update happens in a `finally` block or at all exit points of the extraction coroutine to guarantee the camera resumes after a failure.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `:androidApp:assembleDebug` to ensure resources are correctly generated.
-
 ### Manual Verification
-1.  **AI Performance**: Verify that the Settings screen now displays the actual values (e.g., "8.50 tokens/sec") instead of the literal placeholder string.
-2.  **Download Progress**: Verify that the download percentage is correctly displayed during model download.
+1.  **Silence Verification**: Point the camera at a receipt. Once processing starts, verify that "OCR process succeeded via visionkit pipeline" logs stop in the console.
+2.  **Failure Recovery**:
+    - Trigger a scan on "nonsense" text that passes the local check but might fail LLM extraction.
+    - Verify that once the spinner disappears, the camera immediately resumes highlighting text.
+3.  **Success Path**: Verify that successful extraction still navigates back as expected.

@@ -56,14 +56,14 @@
     <string name="settings_ai_section_title">AI Features</string>
     <string name="settings_ai_scanner_title">Receipt Scanner</string>
     <string name="settings_ai_scanner_desc">Enables on-device text recognition and parsing.</string>
-    <string name="llm_model_name">TinyLlama 1.1B</string>
+    <string name="llm_model_name">Qwen 2.5 1.5B</string>
     <string name="settings_ai_ready">Scanner Ready</string>
     <string name="settings_ai_performance_title">Performance</string>
     <string name="settings_ai_tps_label">Token generation Speed: %1$s tokens/sec</string>
     <string name="settings_ai_time_label">Average Scan Time: %1$s sec</string>
     <string name="settings_ai_download_progress">Downloading model: %1$d%%</string>
     <string name="settings_ai_btn_delete">Delete</string>
-    <string name="settings_ai_btn_enable">Enable Receipt Scanner (~600MB)</string>
+    <string name="settings_ai_btn_enable">Enable Receipt Scanner (~1.1GB)</string>
     <string name="settings_guest_mode_title">Guest Mode</string>
     <string name="settings_guest_mode_subtitle">Sign in to backup your expenses to Google Drive.</string>
     <string name="settings_label_currency">Preferred Currency</string>
