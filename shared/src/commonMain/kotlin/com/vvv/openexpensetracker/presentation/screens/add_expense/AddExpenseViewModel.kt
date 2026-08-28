@@ -43,6 +43,7 @@ class AddExpenseViewModel(
 ) : ViewModel() {
 
     private var editingExpenseId: String? = null
+    private var isDataLoaded = false
 
     private val _uiState = MutableStateFlow(AddExpenseUIState(date = getCurrentTimeMillis()))
     val uiState: StateFlow<AddExpenseUIState> = combine(
@@ -69,11 +70,18 @@ class AddExpenseViewModel(
             is AddExpenseIntent.CategoryChanged -> onCategoryChanged(intent.category)
             is AddExpenseIntent.ReceiptScanned -> onReceiptScanned(intent.receipt)
             AddExpenseIntent.SaveExpense -> saveExpense()
-            AddExpenseIntent.ResetSaveState -> _uiState.update { it.copy(isSaved = false) }
+            AddExpenseIntent.ResetSaveState -> {
+                _uiState.update { it.copy(isSaved = false) }
+                isDataLoaded = false
+            }
         }
     }
 
     private fun loadExpense(id: String?) {
+        // Guard: If we've already loaded data (or scanned something), don't reset the state
+        // unless the requested ID has actually changed.
+        if (isDataLoaded && id == editingExpenseId) return
+        
         if (id == null) {
             editingExpenseId = null
             _uiState.update {
@@ -87,8 +95,10 @@ class AddExpenseViewModel(
                     amountError = null
                 )
             }
+            isDataLoaded = true
             return
         }
+
         editingExpenseId = id
         _uiState.update { it.copy(isSaved = false) }
         viewModelScope.launch {
@@ -105,6 +115,7 @@ class AddExpenseViewModel(
                     )
                 }
             }
+            isDataLoaded = true
         }
     }
 
@@ -139,54 +150,20 @@ class AddExpenseViewModel(
 
     private fun onReceiptScanned(receipt: ParsedReceipt) {
         viewModelScope.launch {
-            val mappedCategory = mapCategory(receipt.category)
-            val richDescription = constructDescription(receipt.merchant, receipt.items)
-            
+            val mappedCategory = receipt.category
+            val merchant = receipt.merchant ?: ""
             _uiState.update {
                 it.copy(
                     amount = receipt.amount?.let { amt -> formatAmount(amt) } ?: it.amount,
                     date = receipt.date ?: it.date,
                     category = mappedCategory ?: it.category,
-                    description = richDescription.ifBlank { it.description },
+                    description = it.description + " " + merchant,
                     amountError = null,
                     descriptionError = null
                 )
             }
+            isDataLoaded = true
         }
-    }
-
-    private fun mapCategory(suggested: String?): String? {
-        if (suggested == null) return null
-        
-        val normalized = suggested.trim().uppercase()
-        
-        // 1. Exact match in Category.list
-        Category.list.find { it.uppercase() == normalized }?.let { return it }
-        
-        // 2. Heuristic mapping
-        return when {
-            normalized.contains("FOOD") || normalized.contains("GROCERY") || 
-            normalized.contains("DINING") || normalized.contains("RESTAURANT") -> Category.FOOD
-            normalized.contains("TRANSPORT") || normalized.contains("GAS") || 
-            normalized.contains("FUEL") || normalized.contains("TAXI") || normalized.contains("UBER") -> Category.TRANSPORT
-            normalized.contains("UTIL") || normalized.contains("BILL") || normalized.contains("ELECTRIC") -> Category.UTILITIES
-            normalized.contains("ENT") || normalized.contains("MOVIE") || normalized.contains("GAME") -> Category.ENTERTAINMENT
-            normalized.contains("HEALTH") || normalized.contains("MEDICINE") || normalized.contains("DRUG") || normalized.contains("CLINIC") -> Category.HEALTH
-            normalized.contains("SHOP") || normalized.contains("STORE") || normalized.contains("CLOTH") -> Category.SHOPPING
-            else -> Category.OTHERS
-        }
-    }
-
-    private fun constructDescription(merchant: String?, items: String?): String {
-        return buildString {
-            if (!merchant.isNullOrBlank()) {
-                append(merchant.trim())
-            }
-            if (!items.isNullOrBlank()) {
-                if (isNotEmpty()) append(" ")
-                append("(${items.trim()})")
-            }
-        }.trim()
     }
 
     private fun formatAmount(amount: Double): String {

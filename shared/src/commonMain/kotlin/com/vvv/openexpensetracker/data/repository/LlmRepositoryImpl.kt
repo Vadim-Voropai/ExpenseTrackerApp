@@ -3,10 +3,12 @@ package com.vvv.openexpensetracker.data.repository
 import com.llamatik.library.platform.GenStream
 import com.llamatik.library.platform.LlamaBridge
 import com.vvv.openexpensetracker.data.source.local.LocalStorage
+import com.vvv.openexpensetracker.domain.model.Category
 import com.vvv.openexpensetracker.domain.repository.LlmBenchmarkResult
 import com.vvv.openexpensetracker.domain.repository.LlmRepository
 import com.vvv.openexpensetracker.domain.repository.PreferencesRepository
 import com.vvv.openexpensetracker.domain.util.ParsedReceipt
+import com.vvv.openexpensetracker.domain.util.ReceiptParser
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.request.prepareGet
@@ -182,23 +184,21 @@ class LlmRepositoryImpl(
     }
 
     override suspend fun normalizeReceiptData(text: String): String {
-        val cleanedText = text.replace("\n", "|").trim().take(3000)
+        val trimmedText = ReceiptParser.trimAfterTotal(text)
         // Advanced prompt for Qwen 2.5 to repair and normalize OCR text
         val prompt = """
             <|im_start|>system
-            You are an expert POS receipt data cleaner. Your task is to repair "broken" OCR text from physical receipts.
-            Fix character substitutions (e.g., 'S' for '5', 'O' for '0', '|' for '1'), repair fragmented vendor names, and normalize dates, in case when date is unclear set today.
+            You are an expert POS receipt data cleaner.
+            Your task is to repair "broken" OCR text from physical receipts.
+            Fix character substitutions (e.g., 'S' for '5', 'O' for '0', '|' for '1'), repair fragmented vendor names, and normalize dates (use current year if missing).
             Rules:
-            1. Output ONLY the repaired and structured JSON.
-            2. Fields: "vendor", "date" (YYYY-MM-DD), "total" (number), "category", "items".
-            3. If a field is beyond repair, use null.
+            1. Output ONLY the repaired and structured string.
+            2. If a word is beyond repair, remove it.
             <|im_end|>
             <|im_start|>user
-            Repair and extract from this messy OCR:
-            "$cleanedText"
+            Input: "$trimmedText"
             <|im_end|>
             <|im_start|>assistant
-            {
         """.trimIndent()
         
         return makeLLMRequest(prompt) ?: text
@@ -206,16 +206,20 @@ class LlmRepositoryImpl(
 
     override suspend fun extractReceiptData(text: String): ParsedReceipt? =
         withContext(Dispatchers.IO) {
-            val cleanedText = text.replace("\n", " ").trim().take(2000)
-            // Using ChatML format for Qwen 2.5
+            val categories = Category.list
             val prompt = """
                 <|im_start|>system
                 You are a POS receipt data extractor. Extract data from the user input into JSON.
-                Fields: "vendor", "date" (YYYY-MM-DD), "total" (number), "category", "items".
-                If unknown, use null or 0.0.
+                Rules:
+                1. Output ONLY a raw JSON object.
+                2. Fields: "vendor" (string), "date" (YYYY-MM-DD), "total" (number), "category" (string).
+                3. Items field should be a short comma-separated list of bought products.
+                4. Use one of these categories if possible: $categories.
+                5. Use the exact total amount from the receipt (do NOT round).
+                6. If a field is unknown, use null.
                 <|im_end|>
                 <|im_start|>user
-                Input: "$cleanedText"
+                Input: "$text"
                 <|im_end|>
                 <|im_start|>assistant
                 {
@@ -251,7 +255,6 @@ class LlmRepositoryImpl(
                     date = jsonObject["date"].asString()?.let { parseDate(it) },
                     category = jsonObject["category"].asString(),
                     merchant = jsonObject["vendor"].asString(),
-                    items = jsonObject["items"].asString(),
                 )
             } catch (e: Exception) {
                 println("Error parsing LLM response: ${e.message}")

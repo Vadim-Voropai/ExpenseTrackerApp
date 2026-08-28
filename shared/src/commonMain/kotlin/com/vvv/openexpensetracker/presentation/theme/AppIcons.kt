@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -16,15 +17,19 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.vvv.openexpensetracker.domain.model.Category
 
 object AppIcons {
     val Food = Icons.Default.ShoppingCart
     val Transport = Icons.Default.LocationOn
-    val Utilities = Icons.Default.Home
+    val Car = Icons.Default.Build
+    val Sport = Icons.Default.Star
+    val Bills = Icons.Default.Home
     val Entertainment = Icons.Default.PlayArrow
+    val Closes = Icons.Default.AccountBox
     val Health = Icons.Default.Favorite
-    val Shopping = Icons.Default.AccountBox
     val Others = Icons.Default.Info
     
     val Sync = Icons.Default.Refresh
@@ -39,12 +44,14 @@ object AppIcons {
 
 fun getCategoryIcon(category: String): ImageVector {
     return when (category) {
-        "Food" -> AppIcons.Food
-        "Transport" -> AppIcons.Transport
-        "Utilities" -> AppIcons.Utilities
-        "Entertainment" -> AppIcons.Entertainment
-        "Health" -> AppIcons.Health
-        "Shopping" -> AppIcons.Shopping
+        Category.FOOD -> AppIcons.Food
+        Category.TRANSPORT -> AppIcons.Transport
+        Category.CAR -> AppIcons.Car
+        Category.SPORT -> AppIcons.Sport
+        Category.BILLS -> AppIcons.Bills
+        Category.ENTERTAINMENT -> AppIcons.Entertainment
+        Category.CLOSES -> AppIcons.Closes
+        Category.HEALTH -> AppIcons.Health
         else -> AppIcons.Others
     }
 }

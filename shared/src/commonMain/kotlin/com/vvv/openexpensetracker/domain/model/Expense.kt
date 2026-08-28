@@ -1,5 +1,6 @@
 package com.vvv.openexpensetracker.domain.model
 
+import com.vvv.openexpensetracker.domain.model.Category.getCategoryNameResource
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,8 +12,4 @@ data class Expense(
     val category: String,
     val lastModified: Long, // milliseconds timestamp for syncing conflict resolution
     val isDeleted: Boolean = false
-) {
-    val displayTitle: String
-        get() = if (description.isEmpty()) category else "$category \n $description"
-
-}
+)

@@ -158,11 +158,6 @@ fun ScanReceiptScreen(
                                     label = stringResource(Res.string.scan_label_amount),
                                     isFound = uiState.amountFound
                                 )
-                                Spacer(modifier = Modifier.width(dimens.spacingLarge))
-                                DetectionStatusItem(
-                                    label = stringResource(Res.string.scan_label_date),
-                                    isFound = uiState.dateFound
-                                )
                             }
                             Text(
                                 text = stringResource(Res.string.scan_guidance),

@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
@@ -54,11 +55,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import com.vvv.openexpensetracker.domain.model.AppCurrency
 import com.vvv.openexpensetracker.domain.model.Category
+import com.vvv.openexpensetracker.domain.model.Category.getCategoryNameResource
 import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
-import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottieComposition
@@ -115,7 +116,8 @@ fun ExpenseListScreen(
                 is ExpenseListUiEffect.ShowUndoSnackbar -> {
                     val result = snackbarHostState.showSnackbar(
                         message = expenseDeletedMsg,
-                        actionLabel = undoMsg
+                        actionLabel = undoMsg,
+                        duration = SnackbarDuration.Short,
                     )
                     if (result == SnackbarResult.ActionPerformed) {
                         viewModel.onIntent(ExpenseListIntent.UndoDelete(effect.expenseId))
@@ -368,16 +370,25 @@ fun ExpenseItemRow(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = expense.displayTitle,
+                    text = stringResource(getCategoryNameResource(expense.category)),
                     style = typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
+                if (expense.description.isNotEmpty()) {
+                    Text(
+                        text = expense.description,
+                        style = typography.bodyMedium,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    )
+                }
                 Text(
                     text = formatDate(expense.date),
                     style = typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 )
             }
 
@@ -386,7 +397,7 @@ fun ExpenseItemRow(
                 Text(
                     text = "${currency.symbol}${formatAmount(expense.amount)}",
                     style = typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
         }

@@ -37,10 +37,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.vvv.openexpensetracker.domain.model.Category.getCategoryNameResource
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
-import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
 import openexpensetracker.shared.generated.resources.Res
 import openexpensetracker.shared.generated.resources.stats_breakdown_title
 import openexpensetracker.shared.generated.resources.stats_empty_message

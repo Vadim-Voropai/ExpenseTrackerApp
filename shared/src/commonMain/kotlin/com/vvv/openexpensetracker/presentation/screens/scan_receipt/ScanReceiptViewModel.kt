@@ -25,7 +25,6 @@ data class ScanReceiptUIState(
     val isReady: Boolean = false,
     val isProcessing: Boolean = false,
     val amountFound: Boolean = false,
-    val dateFound: Boolean = false
 )
 
 class ScanReceiptViewModel(
@@ -70,16 +69,13 @@ class ScanReceiptViewModel(
         if (!_uiState.value.isReady || _uiState.value.isProcessing) return
 
         _uiState.update { it.copy(isProcessing = true) }
+
         viewModelScope.launch {
             try {
-                val normalized = normalizeReceiptLlmUseCase.invoke(text)
-                val parsed = analyzeReceiptLlmUseCase.invoke(normalized)
+                val parsed = analyzeReceiptLlmUseCase.invoke(text = ReceiptParser.trimAfterTotal(text))
                 if (parsed != null) {
                     _uiState.update {
-                        it.copy(
-                            amountFound = parsed.amount != null,
-                            dateFound = parsed.date != null,
-                        )
+                        it.copy(amountFound = parsed.amount != null)
                     }
 
                     if (parsed.amount != null && parsed.date != null) {

@@ -49,10 +49,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import com.vvv.openexpensetracker.domain.model.Category
+import com.vvv.openexpensetracker.domain.model.Category.getCategoryNameResource
 import com.vvv.openexpensetracker.presentation.theme.AppTheme
 import com.vvv.openexpensetracker.presentation.theme.getCategoryColor
 import com.vvv.openexpensetracker.presentation.theme.getCategoryIcon
-import com.vvv.openexpensetracker.presentation.theme.getCategoryNameResource
 import openexpensetracker.shared.generated.resources.Res
 import openexpensetracker.shared.generated.resources.action_save
 import openexpensetracker.shared.generated.resources.action_scan_receipt
