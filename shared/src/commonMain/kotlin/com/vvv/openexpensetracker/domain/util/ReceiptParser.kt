@@ -2,15 +2,12 @@ package com.vvv.openexpensetracker.domain.util
 
 data class ParsedReceipt(
     val amount: Double?,
-    val date: Long?,
     val category: String?,
-    val merchant: String?,
 )
 
 object ReceiptParser {
 
     private val amountRegex = Regex("""(\d+[.,]\d{2})""")
-    private val dateRegex = Regex("""(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})""")
     private const val totalKeyword = "TOTAL"
     private const val TRIM_BUFFER = 20
 
@@ -22,8 +19,7 @@ object ReceiptParser {
         val hasKeywords = receiptKeywords.any { text.contains(it, ignoreCase = true) }
         val hasTotal = text.contains(totalKeyword, ignoreCase = true)
         val hasPrice = amountRegex.containsMatchIn(text)
-        val hasDate = dateRegex.containsMatchIn(text)
-        return hasTotal && hasKeywords && hasPrice && hasDate
+        return hasTotal && hasKeywords && hasPrice
     }
 
     fun trimAfterTotal(text: String): String {

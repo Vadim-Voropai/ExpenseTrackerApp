@@ -72,13 +72,14 @@ class ScanReceiptViewModel(
 
         viewModelScope.launch {
             try {
-                val parsed = analyzeReceiptLlmUseCase.invoke(text = ReceiptParser.trimAfterTotal(text))
+                val normalized = normalizeReceiptLlmUseCase.invoke(ReceiptParser.trimAfterTotal(text))
+                val parsed = analyzeReceiptLlmUseCase.invoke(text = normalized)
                 if (parsed != null) {
                     _uiState.update {
                         it.copy(amountFound = parsed.amount != null)
                     }
 
-                    if (parsed.amount != null && parsed.date != null) {
+                    if (parsed.amount != null) {
                         _effect.send(ScanReceiptUiEffect.ReceiptFound(text, parsed))
                     }
                 }

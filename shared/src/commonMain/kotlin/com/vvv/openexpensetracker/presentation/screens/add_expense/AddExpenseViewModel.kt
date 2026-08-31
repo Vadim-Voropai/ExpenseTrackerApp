@@ -151,13 +151,10 @@ class AddExpenseViewModel(
     private fun onReceiptScanned(receipt: ParsedReceipt) {
         viewModelScope.launch {
             val mappedCategory = receipt.category
-            val merchant = receipt.merchant ?: ""
             _uiState.update {
                 it.copy(
                     amount = receipt.amount?.let { amt -> formatAmount(amt) } ?: it.amount,
-                    date = receipt.date ?: it.date,
                     category = mappedCategory ?: it.category,
-                    description = it.description + " " + merchant,
                     amountError = null,
                     descriptionError = null
                 )

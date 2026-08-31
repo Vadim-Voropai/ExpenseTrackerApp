@@ -62,6 +62,7 @@ class LlmRepositoryImpl(
         get() = localStorage.fileSystem
 
     private val repositoryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var isInitialized = false
 
     init {
         // Self-healing check: Verify actual file presence and integrity on startup in background
@@ -124,6 +125,7 @@ class LlmRepositoryImpl(
             // Reuse the same integrity check logic
             if (verifyModelIntegrity()) {
                 preferencesRepository.setLlmDownloaded(true)
+                initialize()
             } else {
                 // Integrity check failed - delete corrupted file
                 try {
@@ -147,7 +149,13 @@ class LlmRepositoryImpl(
     }.flowOn(Dispatchers.IO)
 
     override suspend fun initialize(): Boolean {
+        if (!fs.exists(modelPath.toPath())) {
+            println("LLM Init failed: Model file not found at $modelPath")
+            return false
+        }
+
         return try {
+            println("Initializing LLM model from $modelPath...")
             LlamaBridge.initGenerateModel(modelPath)
             LlamaBridge.updateGenerateParams(
                 temperature = 0.1f,
@@ -162,9 +170,13 @@ class LlmRepositoryImpl(
                 batchSize = 512,
                 gpuLayers = 0
             )
+            isInitialized = true
+            println("LLM Initialized successfully")
             true
         } catch (e: Exception) {
+            println("LLM Initialization failed: ${e.message}")
             e.printStackTrace()
+            isInitialized = false
             false
         }
     }
@@ -174,6 +186,7 @@ class LlmRepositoryImpl(
     override fun deleteModel(): Boolean {
         return try {
             LlamaBridge.shutdown()
+            isInitialized = false
             fs.delete(modelPath.toPath())
             preferencesRepository.setLlmDownloaded(false)
             true
@@ -212,10 +225,9 @@ class LlmRepositoryImpl(
                 You are a POS receipt data extractor. Extract data from the user input into JSON.
                 Rules:
                 1. Output ONLY a raw JSON object.
-                2. Fields: "vendor" (string), "date" (YYYY-MM-DD), "total" (number), "category" (string).
-                3. Items field should be a short comma-separated list of bought products.
-                4. Use one of these categories if possible: $categories.
-                5. Use the exact total amount from the receipt (do NOT round).
+                2. Fields: "total" (number), "category" (string).
+                4. Use one of these categories: $categories.
+                5. Use the exact total amount from the receipt (round up).
                 6. If a field is unknown, use null.
                 <|im_end|>
                 <|im_start|>user
@@ -252,9 +264,7 @@ class LlmRepositoryImpl(
 
                 ParsedReceipt(
                     amount = jsonObject["total"].asDouble(),
-                    date = jsonObject["date"].asString()?.let { parseDate(it) },
                     category = jsonObject["category"].asString(),
-                    merchant = jsonObject["vendor"].asString(),
                 )
             } catch (e: Exception) {
                 println("Error parsing LLM response: ${e.message}")
@@ -264,6 +274,14 @@ class LlmRepositoryImpl(
 
     private suspend fun makeLLMRequest(prompt: String): String? =
         withContext(Dispatchers.IO) {
+            if (!isInitialized) {
+                println("LLM not initialized. Attempting JIT initialization...")
+                if (!initialize()) {
+                    println("JIT Initialization failed.")
+                    return@withContext null
+                }
+            }
+
             try {
                 println("Receipt prompt (ChatML): $prompt")
 
@@ -307,6 +325,7 @@ class LlmRepositoryImpl(
                     LlmBenchmarkResult(tps, totalDuration.toLong(DurationUnit.MILLISECONDS))
                 )
 
+                println("LLM Request took: ${totalDuration.toDouble(DurationUnit.SECONDS)}s ($tps tps)")
                 println("Receipt full JSON: $response")
                 return@withContext response
             } catch (e: Exception) {
