@@ -11,13 +11,9 @@ import com.vvv.openexpensetracker.domain.repository.ExpenseRepository
 import com.vvv.openexpensetracker.domain.repository.GoogleAuthRepository
 import com.vvv.openexpensetracker.domain.repository.GoogleDriveRepository
 import kotlin.time.Clock
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 
 class ExpenseRepositoryImpl(
     private val database: AppDatabase,
@@ -26,26 +22,7 @@ class ExpenseRepositoryImpl(
     private val googleAuthRepository: GoogleAuthRepository
 ) : ExpenseRepository {
 
-    private val json = Json { ignoreUnknownKeys = true }
     private val queries = database.appDatabaseQueries
-    private val repositoryScope = CoroutineScope(Dispatchers.Default)
-
-    init {
-        migrateFromFileToDb()
-    }
-
-    private fun migrateFromFileToDb() {
-        try {
-            val content = localStorage.loadExpensesFile()
-            if (!content.isNullOrEmpty()) {
-                val list = json.decodeFromString<List<Expense>>(content)
-                saveLocalExpenses(list)
-                localStorage.saveExpensesFile("")
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 
     override fun getExpenses(): Flow<List<Expense>> {
         return queries.getExpenses()
@@ -64,9 +41,9 @@ class ExpenseRepositoryImpl(
             date = expense.date,
             category = expense.category,
             lastModified = expense.lastModified,
-            isDeleted = if (expense.isDeleted) 1L else 0L
+            isDeleted = expense.isDeleted
         )
-        triggerAutoSync()
+        syncWithGoogleDrive()
     }
 
     override suspend fun deleteExpense(id: String) {
@@ -89,14 +66,6 @@ class ExpenseRepositoryImpl(
         }
     }
 
-    private fun triggerAutoSync() {
-        if (googleAuthRepository.isSignedIn()) {
-            repositoryScope.launch {
-                syncWithGoogleDrive()
-            }
-        }
-    }
-
     override suspend fun syncWithGoogleDrive(): Result<Unit> {
         if (!googleAuthRepository.isSignedIn()) {
             return Result.failure(Exception("Google Sign-In is required to sync"))
@@ -111,9 +80,8 @@ class ExpenseRepositoryImpl(
             var fileId = googleDriveRepository.findExpensesFile()
 
             val mergedList = if (fileId != null) {
-                val remoteContent = googleDriveRepository.downloadExpensesFile(fileId)
-                if (!remoteContent.isNullOrEmpty()) {
-                    val remoteList = json.decodeFromString<List<Expense>>(remoteContent)
+                val remoteList = googleDriveRepository.downloadExpenses(fileId)
+                if (!remoteList.isNullOrEmpty()) {
                     mergeExpenses(localList, remoteList)
                 } else {
                     localList
@@ -124,8 +92,7 @@ class ExpenseRepositoryImpl(
             }
 
             if (fileId != null) {
-                val uploadContent = json.encodeToString(mergedList)
-                val success = googleDriveRepository.updateExpensesFile(fileId, uploadContent)
+                val success = googleDriveRepository.updateExpensesFile(fileId, mergedList)
                 if (success) {
                     saveLocalExpenses(mergedList)
                     localStorage.saveString(Constants.KEY_LAST_SYNC_TIME, Clock.System.now().toEpochMilliseconds().toString())
@@ -153,7 +120,7 @@ class ExpenseRepositoryImpl(
                     date = expense.date,
                     category = expense.category,
                     lastModified = expense.lastModified,
-                    isDeleted = if (expense.isDeleted) 1L else 0L
+                    isDeleted = expense.isDeleted
                 )
             }
         }
@@ -179,7 +146,7 @@ class ExpenseRepositoryImpl(
             date = date,
             category = category,
             lastModified = lastModified,
-            isDeleted = isDeleted != 0L
+            isDeleted = isDeleted
         )
     }
 }

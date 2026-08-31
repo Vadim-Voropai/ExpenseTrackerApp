@@ -127,7 +127,7 @@ val dataModule = module {
     }
     
     single { AppDatabase(get<DriverFactory>().createDriver()) }
-    single { GoogleDriveApi(get()) }
+    single { GoogleDriveApi(get(), get()) }
     single<GoogleDriveRepository> { GoogleDriveRepositoryImpl(get(), get()) }
     single<ExpenseRepository> { ExpenseRepositoryImpl(get(), get(), get(), get()) }
     single<PreferencesRepository> { PreferencesRepositoryImpl(get()) }

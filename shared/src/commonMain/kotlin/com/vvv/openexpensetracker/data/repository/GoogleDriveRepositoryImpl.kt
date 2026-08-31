@@ -3,6 +3,7 @@ package com.vvv.openexpensetracker.data.repository
 import com.vvv.openexpensetracker.core.Constants
 import com.vvv.openexpensetracker.data.source.local.LocalStorage
 import com.vvv.openexpensetracker.data.source.remote.GoogleDriveApi
+import com.vvv.openexpensetracker.domain.model.Expense
 import com.vvv.openexpensetracker.domain.repository.GoogleDriveRepository
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
@@ -28,9 +29,9 @@ class GoogleDriveRepositoryImpl(
         return fileId
     }
 
-    override suspend fun downloadExpensesFile(fileId: String): String? {
+    override suspend fun downloadExpenses(fileId: String): List<Expense>? {
         return try {
-            api.downloadExpensesFile(fileId)
+            api.downloadExpenses(fileId)
         } catch (e: ClientRequestException) {
             if (e.response.status == HttpStatusCode.NotFound) {
                 clearCache()
@@ -50,9 +51,9 @@ class GoogleDriveRepositoryImpl(
         return fileId
     }
 
-    override suspend fun updateExpensesFile(fileId: String, content: String): Boolean {
+    override suspend fun updateExpensesFile(fileId: String, expenses: List<Expense>): Boolean {
         return try {
-            api.updateExpensesFile(fileId, content)
+            api.updateExpensesFile(fileId, expenses)
         } catch (e: ClientRequestException) {
             if (e.response.status == HttpStatusCode.NotFound) {
                 clearCache()

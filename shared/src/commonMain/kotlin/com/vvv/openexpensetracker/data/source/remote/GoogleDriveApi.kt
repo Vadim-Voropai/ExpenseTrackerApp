@@ -6,6 +6,7 @@ import com.vvv.openexpensetracker.core.network.patch
 import com.vvv.openexpensetracker.core.network.post
 import com.vvv.openexpensetracker.data.model.remote.DriveFile
 import com.vvv.openexpensetracker.data.model.remote.DriveFileListResponse
+import com.vvv.openexpensetracker.domain.model.Expense
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.HttpRequestBuilder
@@ -15,10 +16,11 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import kotlinx.serialization.json.Json
 
 class UnauthorizedException : Exception("Unauthorized access - token may be expired")
 
-class GoogleDriveApi(private val client: HttpClient) {
+class GoogleDriveApi(private val client: HttpClient, private val json: Json) {
 
     private fun HttpRequestBuilder.addDriveParams(includeItems: Boolean = false) {
         parameter("supportsAllDrives", "true")
@@ -97,7 +99,7 @@ class GoogleDriveApi(private val client: HttpClient) {
     }
 
     // Downloads the content of a specific file
-    suspend fun downloadExpensesFile(fileId: String): String? {
+    suspend fun downloadExpenses(fileId: String): List<Expense>? {
         return try {
             client.get("${Constants.GOOGLE_DRIVE_FILES_URL}/$fileId") {
                 addDriveParams(includeItems = true)
@@ -120,7 +122,7 @@ class GoogleDriveApi(private val client: HttpClient) {
             val fileId = createResponse.id
 
             // Initialize with an empty JSON array to ensure a valid starting state
-            updateExpensesFile(fileId, "[]")
+            updateExpensesFile(fileId, emptyList())
 
             fileId
         } catch (e: Exception) {
@@ -131,8 +133,9 @@ class GoogleDriveApi(private val client: HttpClient) {
     }
 
     // Updates the content of "expenses.json"
-    suspend fun updateExpensesFile(fileId: String, content: String): Boolean {
+    suspend fun updateExpensesFile(fileId: String, expenses: List<Expense>): Boolean {
         return try {
+            val content = json.encodeToString(expenses)
             client.patch<HttpResponse>("${Constants.GOOGLE_DRIVE_UPLOAD_URL}/$fileId") {
                 addDriveParams()
                 header(HttpHeaders.ContentType, "application/json")

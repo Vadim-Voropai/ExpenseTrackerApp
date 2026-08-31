@@ -8,7 +8,7 @@ plugins {
 dependencies {
     implementation(projects.shared)
     implementation(libs.androidx.activity.compose)
-    implementation("io.insert-koin:koin-android:4.2.1")
+    implementation(libs.koin.android)
     implementation(libs.compose.foundation)
     implementation(libs.ktor.client.okhttp)
     implementation(libs.play.services.auth)

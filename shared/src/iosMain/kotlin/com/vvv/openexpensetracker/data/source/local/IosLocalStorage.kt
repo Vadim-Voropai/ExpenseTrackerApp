@@ -1,6 +1,5 @@
 package com.vvv.openexpensetracker.data.source.local
 
-import com.vvv.openexpensetracker.core.Constants
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -23,30 +22,6 @@ class IosLocalStorage : LocalStorage {
 
     override fun getString(key: String): String? {
         return defaults.stringForKey(key)
-    }
-
-    override fun saveExpensesFile(content: String) {
-        val fileManager = NSFileManager.defaultManager
-        val urls = fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask)
-        val documentUrl = urls.firstOrNull() as? NSURL ?: return
-        val fileUrl = documentUrl.URLByAppendingPathComponent(Constants.EXPENSES_FILE_NAME) ?: return
-
-        val nsString = content as NSString
-        val data = nsString.dataUsingEncoding(NSUTF8StringEncoding) ?: return
-        data.writeToURL(fileUrl, atomically = true)
-    }
-
-    override fun loadExpensesFile(): String? {
-        val fileManager = NSFileManager.defaultManager
-        val urls = fileManager.URLsForDirectory(NSDocumentDirectory, NSUserDomainMask)
-        val documentUrl = urls.firstOrNull() as? NSURL ?: return null
-        val fileUrl = documentUrl.URLByAppendingPathComponent(Constants.EXPENSES_FILE_NAME) ?: return null
-
-        if (!fileManager.fileExistsAtPath(fileUrl.path ?: "")) return null
-
-        val data = NSData.dataWithContentsOfURL(fileUrl) ?: return null
-        val nsString = NSString.create(data = data, encoding = NSUTF8StringEncoding)
-        return nsString as String?
     }
 
     override fun getFilesDir(): String {
